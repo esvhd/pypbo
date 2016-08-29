@@ -338,5 +338,83 @@ def plot_pbo(pbo_result):
     plt.show()
 
 
+def psr_from_returns(returns, risk_free=0, target_sharpe=0):
+    '''
+    PSR from return series.
+
+    Parameters:
+    returns - return series
+    risk_free - risk free or benchmark rate for sharpe ratio calculation
+    target_sharpe - minimum sharpe ratio
+
+    Returns:
+    PSR probabilities.
+    '''
+    n = len(returns)
+    sharpe = sharpe_iid(returns,
+                        bench=risk_free,
+                        factor=np.sqrt(trading_days))
+    skew = returns.skew()
+    kurtosis = returns.kurtosis()
+
+    return psr(sharpe=sharpe,
+               n=n,
+               skew=skew,
+               kurtosis=kurtosis,
+               target_sharpe=target_sharpe)
+
+
+def psr(sharpe, n, skew, kurtosis, target_sharpe=0):
+    '''
+    Probabilistic Sharpe Ratio.
+
+    Parameters:
+    sharpe - observed sharpe ratio, in same frequency as n.
+    n - no. of observations, should match return / sharpe sampling period.
+    skew - sharpe ratio skew
+    kurtosis - sharpe ratio kurtosis
+    target_sharpe - target sharpe ratio
+
+    Returns:
+    Cumulative probabilities for observed sharpe ratios under standard Normal
+    distribution.
+    '''
+    value = (sharpe - target_sharpe) * np.sqrt(n - 1) / \
+        np.sqrt(1.0 - skew * sharpe + sharpe**2 * (kurtosis - 1) / 4.0)
+    # print(value)
+    psr = ss.norm.cdf(value, 0, 1)
+    return psr
+
+
+def sharpe_iid(df, bench=0, factor=np.sqrt(255)):
+    excess = df - bench
+    if isinstance(df, pd.DataFrame):
+        # return factor * (df.mean() - bench) / df.std(ddof=1)
+        return factor * excess.mean() / excess.std(ddof=1)
+    else:
+        # numpy way
+        return np.mean(excess, axis=0) / np.std(excess,
+                                                axis=0, ddof=1) * factor
+
+
+def minTRL(sharpe, skew, kurtosis, target_sharpe=0, prob=.95):
+    '''
+    Minimum Track Record Length.
+
+    Parameters:
+    sharpe - observed sharpe ratio, in same frequency as n.
+    skew - sharpe ratio skew
+    kurtosis - sharpe ratio kurtosis
+    target_sharpe - target sharpe ratio
+    prob - minimum probability for estimating TRL.
+
+    Returns:
+    minTRL
+    '''
+    min_track = 1 + (1 - skew * sharpe + sharpe**2 * (kurtosis - 1) / 4.0) *\
+        (ss.norm.ppf(prob) / (sharpe - target_sharpe))**2
+    return min_track
+
+
 if __name__ == 'main':
     pass

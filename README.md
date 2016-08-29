@@ -9,12 +9,12 @@ Features:
 * Probability of Out of Sample (OOS) Below Threshold
 * Performance Degradation
 * Stochastic Dominance
+* Probabilistic Sharpe Ratio (PSR) statistics [2]
+* Minimum track record length (MinTRL) [2]
 
 TODO:
 
-Add other features as as:
-* PSR statistics [2]
-* Minimum track record length (MinTRL) [2]
+Add other feature(s), such as:
 * Minimum backtest length (MinBTL) [3]
 
 
