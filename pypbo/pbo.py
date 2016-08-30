@@ -343,47 +343,99 @@ def psr_from_returns(returns, risk_free=0, target_sharpe=0):
     PSR from return series.
 
     Parameters:
-    returns - return series
-    risk_free - risk free or benchmark rate for sharpe ratio calculation
-    target_sharpe - minimum sharpe ratio
+        returns - return series
+        risk_free - risk free or benchmark rate for sharpe ratio calculation,
+        default 0.
+        target_sharpe - minimum sharpe ratio
 
     Returns:
-    PSR probabilities.
+        PSR probabilities.
     '''
-    n = len(returns)
+    T = len(returns)
     sharpe = sharpe_iid(returns,
                         bench=risk_free,
-                        factor=np.sqrt(trading_days))
+                        factor=1)
     skew = returns.skew()
     kurtosis = returns.kurtosis()
 
     return psr(sharpe=sharpe,
-               n=n,
+               T=T,
                skew=skew,
                kurtosis=kurtosis,
                target_sharpe=target_sharpe)
 
 
-def psr(sharpe, n, skew, kurtosis, target_sharpe=0):
+def psr(sharpe, T, skew, kurtosis, target_sharpe=0):
     '''
     Probabilistic Sharpe Ratio.
 
     Parameters:
-    sharpe - observed sharpe ratio, in same frequency as n.
-    n - no. of observations, should match return / sharpe sampling period.
-    skew - sharpe ratio skew
-    kurtosis - sharpe ratio kurtosis
-    target_sharpe - target sharpe ratio
+        sharpe - observed sharpe ratio, in same frequency as T.
+        T - no. of observations, should match return / sharpe sampling period.
+        skew - sharpe ratio skew
+        kurtosis - sharpe ratio kurtosis
+        target_sharpe - target sharpe ratio
 
     Returns:
-    Cumulative probabilities for observed sharpe ratios under standard Normal
-    distribution.
+        Cumulative probabilities for observed sharpe ratios under standard
+        Normal distribution.
     '''
-    value = (sharpe - target_sharpe) * np.sqrt(n - 1) / \
+    value = (sharpe - target_sharpe) * np.sqrt(T - 1) / \
         np.sqrt(1.0 - skew * sharpe + sharpe**2 * (kurtosis - 1) / 4.0)
     # print(value)
     psr = ss.norm.cdf(value, 0, 1)
     return psr
+
+
+def dsr(test_sharpe, sharpe_std, N, T, skew, kurtosis):
+    '''
+    Deflated Sharpe Ratio statistic. DSR = PSR(SR_0).
+    See paper for definition of SR_0. http://ssrn.com/abstract=2460551
+
+    Parameters:
+        test_sharpe : reported sharpe, to be tested.
+        sharpe_std : standard deviation of sharpe ratios from N
+        trials / configurations
+        N : number of backtest configurations
+        T : number of observations
+        skew : skew of returns
+        kurtosis : kurtosis of returns
+
+    Returns:
+        DSR statistic
+    '''
+    # sharpe_std = np.std(sharpe_n, ddof=1)
+    target_sharpe = sharpe_std * expected_max(N)
+
+    dsr_stat = psr(test_sharpe, T, skew, kurtosis, target_sharpe)
+
+    return dsr_stat
+
+
+def dsr_from_returns(test_sharpe, returns_df, risk_free=0):
+    '''
+    Calculate DSR based on a set of given returns_df.
+
+    Parameters:
+        test_sharpe : reported sharpe, to be tested.
+        returns_df : return series
+        risk_free : risk free return, default 0.
+    Returns:
+        DSR statistic
+    '''
+    T, N = returns_df.shape
+    sharpe = sharpe_iid(returns_df,
+                        bench=risk_free,
+                        factor=1)
+    sharpe_std = np.std(sharpe, ddof=1)
+    skew = returns_df.skew()
+    kurtosis = returns_df.kurtosis()
+
+    dsr = dsr(test_sharpe,
+              sharpe_std=sharpe_std,
+              N=N, T=T, skew=skew, kurtosis=kurtosis)
+
+    return dsr
 
 
 def sharpe_iid(df, bench=0, factor=np.sqrt(255)):
@@ -402,18 +454,54 @@ def minTRL(sharpe, skew, kurtosis, target_sharpe=0, prob=.95):
     Minimum Track Record Length.
 
     Parameters:
-    sharpe - observed sharpe ratio, in same frequency as n.
-    skew - sharpe ratio skew
-    kurtosis - sharpe ratio kurtosis
-    target_sharpe - target sharpe ratio
-    prob - minimum probability for estimating TRL.
+        sharpe : observed sharpe ratio, in same frequency as observations.
+        skew : sharpe ratio skew
+        kurtosis : sharpe ratio kurtosis
+        target_sharpe : target sharpe ratio
+        prob : minimum probability for estimating TRL.
 
     Returns:
-    minTRL
+        minTRL, in terms of number of observations.
     '''
     min_track = 1 + (1 - skew * sharpe + sharpe**2 * (kurtosis - 1) / 4.0) *\
         (ss.norm.ppf(prob) / (sharpe - target_sharpe))**2
     return min_track
+
+
+def expected_max(N):
+    '''
+    Expected maximum of IID random variance X_n ~ Z, n = 1,...,N,
+    where Z is the CDF of the standard Normal distribution,
+    E[MAX_n] = E[max{x_n}]. Computed for a large N.
+
+    '''
+    if N < 5:
+        raise AssertionError('Condition N >> 1 not satisfied.')
+    return (1 - np.euler_gamma) * ss.norm.ppf(1 - 1.0 / N) + \
+        np.euler_gamma * ss.norm.ppf(1 - np.exp(-1) / N)
+
+
+def minBTL(N, sharpe_IS):
+    '''
+    Minimum backtest length. minBTL should be considered a necessary,
+    non-sufficient condition to avoid overfitting. See PBO for a more precise
+    measure of backtest overfitting.
+
+    Paramters:
+        N : number of backtest configurations
+        sharpe_IS : In-Sample observed Sharpe ratio
+
+    Returns:
+        btl : minimum back test length
+        upper_bound : upper bound for minBTL
+    '''
+    exp_max = expected_max(N)
+
+    btl = (exp_max / sharpe_IS)**2
+
+    upper_bound = 2 * np.log(N) / sharpe_IS**2
+
+    return (btl, upper_bound)
 
 
 if __name__ == 'main':
