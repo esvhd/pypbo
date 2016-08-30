@@ -17,8 +17,8 @@ Features:
 TODO:
 
 * Add test cases.
-* Optimial N trials
-* Harvey and Liu 2014 paper on sharpe ratio threshold.
+* Optimial N trials [4]
+* Harvey and Liu 2014 paper on sharpe ratio threshold. [5]
 
 
 Reference
@@ -30,3 +30,5 @@ Reference
 [3] Bailey, David H. and Borwein, Jonathan M. and Lopez de Prado, Marcos and Zhu, Qiji Jim, Pseudo-Mathematics and Financial Charlatanism: The Effects of Backtest Overfitting on Out-of-Sample Performance (April 1, 2014). Notices of the American Mathematical Society, 61(5), May 2014, pp.458-471. Available at SSRN: http://ssrn.com/abstract=2308659 or http://dx.doi.org/10.2139/ssrn.2308659
 
 [4] Bailey, David H. and Lopez de Prado, Marcos, The Deflated Sharpe Ratio: Correcting for Selection Bias, Backtest Overfitting and Non-Normality (July 31, 2014). Journal of Portfolio Management, 40 (5), pp. 94-107. 2014 (40th Anniversary Special Issue).. Available at SSRN: http://ssrn.com/abstract=2460551
+
+[5] Harvey, Campbell R. and Liu, Yan, Backtesting (July 28, 2015). Available at SSRN: http://ssrn.com/abstract=2345489 or http://dx.doi.org/10.2139/ssrn.2345489
