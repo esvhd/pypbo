@@ -356,7 +356,7 @@ def psr_from_returns(returns, risk_free=0, target_sharpe=0):
                         bench=risk_free,
                         factor=1)
     skew = returns.skew()
-    kurtosis = returns.kurtosis()
+    kurtosis = returns.kurtosis() + 3
 
     return psr(sharpe=sharpe,
                T=T,
@@ -429,7 +429,7 @@ def dsr_from_returns(test_sharpe, returns_df, risk_free=0):
                         factor=1)
     sharpe_std = np.std(sharpe, ddof=1)
     skew = returns_df.skew()
-    kurtosis = returns_df.kurtosis()
+    kurtosis = returns_df.kurtosis() + 3
 
     dsr = dsr(test_sharpe,
               sharpe_std=sharpe_std,
