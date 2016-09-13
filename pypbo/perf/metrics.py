@@ -12,6 +12,27 @@ import statsmodels.tsa.stattools as sts
 trading_days = 255
 
 
+def returns_gmean(returns):
+    '''
+    Calculates geometric average returns.
+    '''
+    if isinstance(returns, pd.DataFrame) or isinstance(returns, pd.Series):
+        returns = returns.fillna(0)
+    else:
+        returns = np.nan_to_num(returns)
+    return ss.gmean(1 + returns, axis=0) - 1
+
+
+def validate_mean_method(method):
+    if method not in {'gmean', 'simple'}:
+        raise AssertionError('mean_method can only be {"gmean", "simple"}')
+
+
+def validate_return_type(return_type):
+    if return_type not in {'pct', 'log'}:
+        raise AssertionError('mean_method can only be {"pct", "log"}')
+
+
 def maxzero(x):
     return np.maximum(x, 0)
 
@@ -23,15 +44,25 @@ def LPM(returns, target_rtn, moment):
     else:
         adj_returns = np.ndarray.clip(target_rtn - returns, min=0)
         # only averaging over non nan values
-        return np.nansum(np.power(adj_returns, moment)) / \
-            np.count_nonzero(~np.isnan(adj_returns))
+        # return np.nansum(np.power(adj_returns, moment)) / \
+        #     np.count_nonzero(~np.isnan(adj_returns))
+        return np.nanmean(np.power(adj_returns, moment), axis=0)
 
 
-def kappa(returns, target_rtn, moment):
-    if isinstance(returns, pd.DataFrame) or isinstance(returns, pd.Series):
-        mean = returns.mean()
+def kappa(returns, target_rtn, moment, return_type='pct'):
+    '''
+    Geometric mean should be used when returns are percentage returns.
+    Arithmetic mean should be used when returns are log returns.
+    '''
+    validate_return_type(return_type)
+
+    if return_type == 'pct':
+        mean = returns_gmean(returns)
     else:
-        mean = np.nanmean(returns)
+        if isinstance(returns, pd.DataFrame) or isinstance(returns, pd.Series):
+            mean = returns.mean()
+        else:
+            mean = np.nanmean(returns)
 
     kappa = (mean - target_rtn) / np.power(LPM(returns,
                                                target_rtn,
@@ -40,33 +71,51 @@ def kappa(returns, target_rtn, moment):
     return kappa
 
 
-def kappa3(returns, target_rtn=0):
+def kappa3(returns, target_rtn=0, return_type='pct'):
     '''
     Kappa 3
     '''
-    return kappa(returns, target_rtn=target_rtn, moment=3)
+    return kappa(returns, target_rtn=target_rtn, moment=3,
+                 return_type=return_type)
 
 
-def omega(returns, target_rtn=0):
+def omega(returns, target_rtn=0, return_type='pct'):
     '''
     Omega Ratio
     '''
-    return kappa(returns, target_rtn=target_rtn, moment=1) + 1
+    return 1 + kappa(returns,
+                     target_rtn=target_rtn,
+                     moment=1,
+                     return_type=return_type)
 
 
-def sortino(returns, target_rtn=0, factor=1):
-    if isinstance(returns, pd.DataFrame) or isinstance(returns, pd.Series):
-        return (returns.mean() - target_rtn) / np.sqrt(LPM(returns,
-                                                           target_rtn, 2))
+def sortino(returns, target_rtn=0, factor=1, return_type='pct'):
+    validate_return_type(return_type)
+
+    if return_type == 'log':
+        if isinstance(returns, pd.DataFrame) or isinstance(returns, pd.Series):
+            return (returns.mean() - target_rtn) / \
+                np.sqrt(LPM(returns, target_rtn, 2))
+        else:
+            return np.nanmean(returns - target_rtn) / \
+                np.sqrt(LPM(returns, target_rtn, 2))
     else:
-        return np.nanmean(returns - target_rtn) / np.sqrt(LPM(returns,
-                                                              target_rtn, 2))
+        mean = returns_gmean(returns)
+        return (mean - target_rtn) / \
+            np.sqrt(LPM(returns, target_rtn, 2)) * factor
 
 
-def sortino_iid(df, bench=0, factor=1):
+def sortino_iid(df, bench=0, factor=1, return_type='pct'):
+    validate_return_type(return_type)
+
     if isinstance(df, np.ndarray):
         df = pd.DataFrame(df)
-    returns = df.mean() - bench
+
+    if return_tpye == 'pct':
+        returns = returns_gmean(df) - bench
+    else:
+        returns = df.mean() - bench
+
     # neg_rtns = df.loc[df < 0]
     neg_rtns = df.where(cond=lambda x: x < 0)
     semi_std = neg_rtns.std(ddof=1)
@@ -99,18 +148,30 @@ def sortino_iid(df, bench=0, factor=1):
 #         return np.nanmean(excess) / np.nanstd(excess, ddof=1)
 
 
-def sharpe_iid(df, bench=0, factor=1):
+def sharpe_iid(df, bench=0, factor=1, return_type='pct'):
+    validate_return_type(return_type)
+
     excess = df - bench
     if isinstance(df, pd.DataFrame) or isinstance(df, pd.Series):
-        # return factor * (df.mean() - bench) / df.std(ddof=1)
-        return factor * excess.mean() / excess.std(ddof=1)
+        # return factor * excess.mean() / excess.std(ddof=1)
+        if return_type == 'pct':
+            excess_mean = returns_gmean(excess)
+        else:
+            excess_mean = excess.mean()
+        return factor * excess_mean / excess.std(ddof=1)
     else:
         # numpy way
-        return np.nanmean(excess, axis=0) / np.nanstd(excess,
-                                                      axis=0, ddof=1) * factor
+        if return_type == 'pct':
+            excess_mean = returns_gmean(excess)
+        else:
+            excess_mean = np.nanmean(excess, axis=0)
+        return factor * excess_mean / np.nanstd(excess, axis=0, ddof=1)
 
 
 def sharpe_iid_rolling(df, window, bench=0, factor=1):
+    '''
+    Not using geometric mean returns.
+    '''
     roll = (df - bench).rolling(window=window)
     # return factor * (roll.mean() - bench) / roll.std(ddof=1)
     return factor * roll.mean() / roll.std(ddof=1)
@@ -128,15 +189,17 @@ def sharpe_iid_adjusted(df, bench=0, factor=1):
 
     if isinstance(df, pd.DataFrame) or isinstance(df, pd.Series):
         skew = df.skew()
-        kurt = df.kurtosis() + 3
+        excess_kurt = df.kurtosis()
     else:
-        skew = ss.skew(df, bias=False)
-        kurt = ss.kurtosis(df, bias=False, fisher=False)
-    return adjusted_sharpe(sr, skew, kurt)
+        skew = ss.skew(df, bias=False, nan_policy='omit')
+        excess_kurt = ss.kurtosis(df, bias=False, fisher=True,
+                                  nan_policy='omit')
+    return adjusted_sharpe(sr, skew, excess_kurt)
 
 
-def adjusted_sharpe(sr, skew, kurtosis):
-    return sr * (1 + (skew / 6.0) * sr + (kurtosis - 3) / 24.0 * sr**2)
+def adjusted_sharpe(sr, skew, excess_kurtosis):
+    # return sr * (1 + (skew / 6.0) * sr + (kurtosis - 3) / 24.0 * sr**2)
+    return sr * (1 + (skew / 6.0) * sr + excess_kurtosis / 24.0 * sr**2)
 
 
 def sharpe_non_iid(df, bench=0, q=trading_days, p_critical=.05):
