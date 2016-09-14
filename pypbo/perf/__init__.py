@@ -2,6 +2,11 @@
 pypbo.perf
 '''
 
+from .metrics import log_returns
+from .metrics import returns_gmean
+from .metrics import pct_to_log_return
+from .metrics import log_to_pct_return
+
 from .metrics import sharpe_iid
 from .metrics import sharpe_iid_adjusted
 from .metrics import sharpe_iid_rolling

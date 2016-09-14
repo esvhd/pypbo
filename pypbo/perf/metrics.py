@@ -14,13 +14,25 @@ trading_days = 255
 
 def returns_gmean(returns):
     '''
-    Calculates geometric average returns.
+    Calculates geometric average returns from a given returns series.
     '''
     if isinstance(returns, pd.DataFrame) or isinstance(returns, pd.Series):
         returns = returns.fillna(0)
     else:
         returns = np.nan_to_num(returns)
     return ss.gmean(1 + returns, axis=0) - 1
+
+
+def log_returns(prices):
+    return np.log(prices / prices.shift(1)).fillna(0)
+
+
+def pct_to_log_return(pct_returns):
+    return np.log(1 + pct_returns.fillna(0))
+
+
+def log_to_pct_return(log_returns):
+    return np.exp(log_returns) - 1
 
 
 def validate_mean_method(method):
@@ -49,7 +61,7 @@ def LPM(returns, target_rtn, moment):
         return np.nanmean(np.power(adj_returns, moment), axis=0)
 
 
-def kappa(returns, target_rtn, moment, return_type='pct'):
+def kappa(returns, target_rtn, moment, return_type='log'):
     '''
     Geometric mean should be used when returns are percentage returns.
     Arithmetic mean should be used when returns are log returns.
@@ -71,7 +83,7 @@ def kappa(returns, target_rtn, moment, return_type='pct'):
     return kappa
 
 
-def kappa3(returns, target_rtn=0, return_type='pct'):
+def kappa3(returns, target_rtn=0, return_type='log'):
     '''
     Kappa 3
     '''
@@ -79,7 +91,7 @@ def kappa3(returns, target_rtn=0, return_type='pct'):
                  return_type=return_type)
 
 
-def omega(returns, target_rtn=0, return_type='pct'):
+def omega(returns, target_rtn=0, return_type='log'):
     '''
     Omega Ratio
     '''
@@ -89,7 +101,7 @@ def omega(returns, target_rtn=0, return_type='pct'):
                      return_type=return_type)
 
 
-def sortino(returns, target_rtn=0, factor=1, return_type='pct'):
+def sortino(returns, target_rtn=0, factor=1, return_type='log'):
     validate_return_type(return_type)
 
     if return_type == 'log':
@@ -105,7 +117,7 @@ def sortino(returns, target_rtn=0, factor=1, return_type='pct'):
             np.sqrt(LPM(returns, target_rtn, 2)) * factor
 
 
-def sortino_iid(df, bench=0, factor=1, return_type='pct'):
+def sortino_iid(df, bench=0, factor=1, return_type='log'):
     validate_return_type(return_type)
 
     if isinstance(df, np.ndarray):
@@ -148,7 +160,7 @@ def sortino_iid(df, bench=0, factor=1, return_type='pct'):
 #         return np.nanmean(excess) / np.nanstd(excess, ddof=1)
 
 
-def sharpe_iid(df, bench=0, factor=1, return_type='pct'):
+def sharpe_iid(df, bench=0, factor=1, return_type='log'):
     validate_return_type(return_type)
 
     excess = df - bench
@@ -177,7 +189,7 @@ def sharpe_iid_rolling(df, window, bench=0, factor=1):
     return factor * roll.mean() / roll.std(ddof=1)
 
 
-def sharpe_iid_adjusted(df, bench=0, factor=1):
+def sharpe_iid_adjusted(df, bench=0, factor=1, return_type='log'):
     '''
     Adjusted Sharpe Ratio, acount for skew and kurtosis in return series.
 
@@ -185,7 +197,7 @@ def sharpe_iid_adjusted(df, bench=0, factor=1):
 
     https://www.google.co.uk/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&cad=rja&uact=8&ved=0ahUKEwi42ZKgg_TOAhVFbhQKHSXPDY0QFggcMAA&url=http%3A%2F%2Fwww.icmacentre.ac.uk%2Fpdf%2Fdiscussion%2FDP2006-10.pdf&usg=AFQjCNF9axYf4Gbz4TVdJUdM8o2M2rz-jg&sig2=pXHZ7M-n-PtNd2d29xhRBw
     '''
-    sr = sharpe_iid(df, bench, factor)
+    sr = sharpe_iid(df, bench, factor=1, return_type=return_type)
 
     if isinstance(df, pd.DataFrame) or isinstance(df, pd.Series):
         skew = df.skew()
@@ -194,7 +206,7 @@ def sharpe_iid_adjusted(df, bench=0, factor=1):
         skew = ss.skew(df, bias=False, nan_policy='omit')
         excess_kurt = ss.kurtosis(df, bias=False, fisher=True,
                                   nan_policy='omit')
-    return adjusted_sharpe(sr, skew, excess_kurt)
+    return adjusted_sharpe(sr, skew, excess_kurt) * factor
 
 
 def adjusted_sharpe(sr, skew, excess_kurtosis):
