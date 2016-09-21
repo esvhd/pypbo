@@ -9,6 +9,8 @@ import collections as cls
 import pandas as pd
 import joblib as job
 
+import pypbo.perf as perf
+
 
 PBO = cls.namedtuple('PBO',
                      ['pbo',
@@ -352,9 +354,9 @@ def psr_from_returns(returns, risk_free=0, target_sharpe=0):
         PSR probabilities.
     '''
     T = len(returns)
-    sharpe = sharpe_iid(returns,
-                        bench=risk_free,
-                        factor=1)
+    sharpe = perf.sharpe_iid(returns,
+                             bench=risk_free,
+                             factor=1)
     skew = returns.skew()
     kurtosis = returns.kurtosis() + 3
 
@@ -417,16 +419,16 @@ def dsr_from_returns(test_sharpe, returns_df, risk_free=0):
     Calculate DSR based on a set of given returns_df.
 
     Parameters:
-        test_sharpe : reported sharpe, to be tested.
-        returns_df : return series
-        risk_free : risk free return, default 0.
+        test_sharpe : Reported sharpe, to be tested.
+        returns_df : Log return series
+        risk_free : Risk free return, default 0.
     Returns:
         DSR statistic
     '''
     T, N = returns_df.shape
-    sharpe = sharpe_iid(returns_df,
-                        bench=risk_free,
-                        factor=1)
+    sharpe = perf.sharpe_iid(returns_df,
+                             bench=risk_free,
+                             factor=1)
     sharpe_std = np.std(sharpe, ddof=1)
     skew = returns_df.skew()
     kurtosis = returns_df.kurtosis() + 3
@@ -438,15 +440,15 @@ def dsr_from_returns(test_sharpe, returns_df, risk_free=0):
     return dsr
 
 
-def sharpe_iid(df, bench=0, factor=np.sqrt(255)):
-    excess = df - bench
-    if isinstance(df, pd.DataFrame):
-        # return factor * (df.mean() - bench) / df.std(ddof=1)
-        return factor * excess.mean() / excess.std(ddof=1)
-    else:
-        # numpy way
-        return np.mean(excess, axis=0) / np.std(excess,
-                                                axis=0, ddof=1) * factor
+# def sharpe_iid(df, bench=0, factor=np.sqrt(255)):
+#     excess = df - bench
+#     if isinstance(df, pd.DataFrame):
+#         # return factor * (df.mean() - bench) / df.std(ddof=1)
+#         return factor * excess.mean() / excess.std(ddof=1)
+#     else:
+#         # numpy way
+#         return np.mean(excess, axis=0) / np.std(excess,
+#                                                 axis=0, ddof=1) * factor
 
 
 def minTRL(sharpe, skew, kurtosis, target_sharpe=0, prob=.95):

@@ -9,6 +9,7 @@ import statsmodels.tsa.stattools as sts
 # maxzero = lambda x: np.maximum(x, 0)
 # vmax = np.vectorize(np.maximum)
 
+# default no. of trading days in a year, 255.
 trading_days = 255
 
 
@@ -69,12 +70,13 @@ def kappa(returns, target_rtn, moment, return_type='log'):
     validate_return_type(return_type)
 
     if return_type == 'pct':
-        mean = returns_gmean(returns)
+        # mean = returns_gmean(returns)
+        returns = pct_to_log_return(returns)
+
+    if isinstance(returns, pd.DataFrame) or isinstance(returns, pd.Series):
+        mean = returns.mean()
     else:
-        if isinstance(returns, pd.DataFrame) or isinstance(returns, pd.Series):
-            mean = returns.mean()
-        else:
-            mean = np.nanmean(returns)
+        mean = np.nanmean(returns)
 
     kappa = (mean - target_rtn) / np.power(LPM(returns,
                                                target_rtn,
@@ -104,17 +106,19 @@ def omega(returns, target_rtn=0, return_type='log'):
 def sortino(returns, target_rtn=0, factor=1, return_type='log'):
     validate_return_type(return_type)
 
-    if return_type == 'log':
-        if isinstance(returns, pd.DataFrame) or isinstance(returns, pd.Series):
-            return (returns.mean() - target_rtn) / \
-                np.sqrt(LPM(returns, target_rtn, 2))
-        else:
-            return np.nanmean(returns - target_rtn) / \
-                np.sqrt(LPM(returns, target_rtn, 2))
+    if return_type == 'pct':
+        returns = pct_to_log_return(returns)
+
+    if isinstance(returns, pd.DataFrame) or isinstance(returns, pd.Series):
+        return (returns.mean() - target_rtn) / \
+            np.sqrt(LPM(returns, target_rtn, 2))
     else:
-        mean = returns_gmean(returns)
-        return (mean - target_rtn) / \
-            np.sqrt(LPM(returns, target_rtn, 2)) * factor
+        return np.nanmean(returns - target_rtn) / \
+            np.sqrt(LPM(returns, target_rtn, 2))
+    # else:
+    #     mean = returns_gmean(returns)
+    #     return (mean - target_rtn) / \
+    #         np.sqrt(LPM(returns, target_rtn, 2)) * factor
 
 
 def sortino_iid(df, bench=0, factor=1, return_type='log'):
@@ -124,14 +128,17 @@ def sortino_iid(df, bench=0, factor=1, return_type='log'):
         df = pd.DataFrame(df)
 
     if return_tpye == 'pct':
-        returns = returns_gmean(df) - bench
+        excess = pct_to_log_return(df - bench)
+        df = pct_to_log_return(df)
+        # excess = returns_gmean(df) - bench
     else:
-        returns = df.mean() - bench
+        excess = df.mean() - bench
 
     # neg_rtns = df.loc[df < 0]
     neg_rtns = df.where(cond=lambda x: x < 0)
     semi_std = neg_rtns.std(ddof=1)
-    return factor * returns / semi_std
+
+    return factor * excess / semi_std
 
 
 # def rolling_lpm(returns, target_rtn, moment, window):
@@ -164,27 +171,37 @@ def sharpe_iid(df, bench=0, factor=1, return_type='log'):
     validate_return_type(return_type)
 
     excess = df - bench
+    if return_type == 'pct':
+        excess = pct_to_log_return(excess)
+
     if isinstance(df, pd.DataFrame) or isinstance(df, pd.Series):
         # return factor * excess.mean() / excess.std(ddof=1)
-        if return_type == 'pct':
-            excess_mean = returns_gmean(excess)
-        else:
-            excess_mean = excess.mean()
+        # if return_type == 'pct':
+        #     excess_mean = returns_gmean(excess)
+        # else:
+        excess_mean = excess.mean()
         return factor * excess_mean / excess.std(ddof=1)
     else:
         # numpy way
-        if return_type == 'pct':
-            excess_mean = returns_gmean(excess)
-        else:
-            excess_mean = np.nanmean(excess, axis=0)
+        # if return_type == 'pct':
+        #     excess_mean = returns_gmean(excess)
+        # else:
+        excess_mean = np.nanmean(excess, axis=0)
         return factor * excess_mean / np.nanstd(excess, axis=0, ddof=1)
 
 
-def sharpe_iid_rolling(df, window, bench=0, factor=1):
+def sharpe_iid_rolling(df, window, bench=0, factor=1, return_type='log'):
     '''
-    Not using geometric mean returns.
+    Rolling sharpe ratio, unadjusted by time aggregation.
     '''
-    roll = (df - bench).rolling(window=window)
+    validate_return_type(return_type)
+
+    if return_type == 'pct':
+        excess = pct_to_log_return(df - bench)
+    else:
+        excess = df - bench
+
+    roll = excess.rolling(window=window)
     # return factor * (roll.mean() - bench) / roll.std(ddof=1)
     return factor * roll.mean() / roll.std(ddof=1)
 
@@ -196,8 +213,15 @@ def sharpe_iid_adjusted(df, bench=0, factor=1, return_type='log'):
     Pezier and White (2006) adjusted sharpe ratio.
 
     https://www.google.co.uk/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&cad=rja&uact=8&ved=0ahUKEwi42ZKgg_TOAhVFbhQKHSXPDY0QFggcMAA&url=http%3A%2F%2Fwww.icmacentre.ac.uk%2Fpdf%2Fdiscussion%2FDP2006-10.pdf&usg=AFQjCNF9axYf4Gbz4TVdJUdM8o2M2rz-jg&sig2=pXHZ7M-n-PtNd2d29xhRBw
+
+    Parameters:
+        df : returns dataframe. Default should be log returns
+        bench : benchmark return
+        factor : time aggregation factor, default 1, i.e. not adjusted.
+        return_type : {'log', 'pct'}, return series type, log or arithmetic
+            percentages.
     '''
-    sr = sharpe_iid(df, bench, factor=1, return_type=return_type)
+    sr = sharpe_iid(df, bench=bench, factor=1, return_type=return_type)
 
     if isinstance(df, pd.DataFrame) or isinstance(df, pd.Series):
         skew = df.skew()
@@ -210,11 +234,24 @@ def sharpe_iid_adjusted(df, bench=0, factor=1, return_type='log'):
 
 
 def adjusted_sharpe(sr, skew, excess_kurtosis):
+    '''
+    Adjusted Sharpe Ratio, acount for skew and kurtosis in return series.
+
+    Pezier and White (2006) adjusted sharpe ratio.
+
+    https://www.google.co.uk/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&cad=rja&uact=8&ved=0ahUKEwi42ZKgg_TOAhVFbhQKHSXPDY0QFggcMAA&url=http%3A%2F%2Fwww.icmacentre.ac.uk%2Fpdf%2Fdiscussion%2FDP2006-10.pdf&usg=AFQjCNF9axYf4Gbz4TVdJUdM8o2M2rz-jg&sig2=pXHZ7M-n-PtNd2d29xhRBw
+
+    Parameters:
+        sr : sharpe ratio
+        skew : return series skew
+        excess_kurtosis : return series excess kurtosis
+    '''
     # return sr * (1 + (skew / 6.0) * sr + (kurtosis - 3) / 24.0 * sr**2)
     return sr * (1 + (skew / 6.0) * sr + excess_kurtosis / 24.0 * sr**2)
 
 
-def sharpe_non_iid(df, bench=0, q=trading_days, p_critical=.05):
+def sharpe_non_iid(df, bench=0, q=trading_days, p_critical=.05,
+                   return_type='log'):
     '''
     Return Sharpe Ratio adjusted for auto-correlation, iff Ljung-Box test
     indicates that the return series exhibits auto-correlation. Based on
@@ -226,8 +263,10 @@ def sharpe_non_iid(df, bench=0, q=trading_days, p_critical=.05):
         q : time aggregation frequency, e.g. 12 for monthly to annual.
             Default 255.
         p_critical : critical p-value to reject Ljung-Box Null, default 0.05.
+        return_type : {'log', 'pct'}, return series type, log or arithmetic
+            percentages.
     '''
-    sr = sharpe_iid(df, bench=bench, factor=1)
+    sr = sharpe_iid(df, bench=bench, factor=1, return_type=return_type)
 
     if not isinstance(df, pd.DataFrame):
         adj_factor, pval = sharpe_autocorr_factor(df, q=q)

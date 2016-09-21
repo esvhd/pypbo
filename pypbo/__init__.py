@@ -14,7 +14,6 @@ from .pbo import dsr_from_returns
 from .pbo import minTRL
 from .pbo import minBTL
 
-from .pbo import sharpe_iid
 from .pbo import expected_max
 
 __version__ = 0.1

@@ -10,6 +10,7 @@ from .metrics import log_to_pct_return
 from .metrics import sharpe_iid
 from .metrics import sharpe_iid_adjusted
 from .metrics import sharpe_iid_rolling
+from .metrics import adjusted_sharpe
 
 from .metrics import sharpe_autocorr_factor
 from .metrics import sharpe_non_iid
