@@ -127,7 +127,7 @@ def sortino_iid(df, bench=0, factor=1, return_type='log'):
     if isinstance(df, np.ndarray):
         df = pd.DataFrame(df)
 
-    if return_tpye == 'pct':
+    if return_type == 'pct':
         excess = pct_to_log_return(df - bench)
         df = pct_to_log_return(df)
         # excess = returns_gmean(df) - bench
@@ -266,6 +266,9 @@ def sharpe_non_iid(df, bench=0, q=trading_days, p_critical=.05,
         return_type : {'log', 'pct'}, return series type, log or arithmetic
             percentages.
     '''
+    if type(q) is not np.int64 or type(q) is not np.int32:
+        q = np.round(q, 0).astype(np.int64)
+
     sr = sharpe_iid(df, bench=bench, factor=1, return_type=return_type)
 
     if not isinstance(df, pd.DataFrame):
