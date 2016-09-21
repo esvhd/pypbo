@@ -27,7 +27,7 @@ Test scripts use `pytest` package. To run tests, as an example, run the
 following script. Make sure `py.test` is in your `PATH` variable.
 
 ```python
-py.test pbo/tests/pbo_test.py
+$ > py.test pypbo/tests/pbo_test.py
 ```
 
 Reference
