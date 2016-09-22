@@ -29,7 +29,11 @@ def log_returns(prices):
 
 
 def pct_to_log_return(pct_returns):
-    return np.log(1 + pct_returns.fillna(0))
+    if isinstance(pct_returns, pd.DataFrame) or \
+            isinstance(pct_returns, pd.Series):
+        return np.log(1 + pct_returns.fillna(0))
+    else:
+        return np.log(1 + np.nan_to_num(pct_returns))
 
 
 def log_to_pct_return(log_returns):
@@ -104,6 +108,10 @@ def omega(returns, target_rtn=0, return_type='log'):
 
 
 def sortino(returns, target_rtn=0, factor=1, return_type='log'):
+    '''
+    Sortino I.I.D ratio caluclated using Lower Partial Moment.
+    Result should be the same as `sortino_iid`.
+    '''
     validate_return_type(return_type)
 
     if return_type == 'pct':
@@ -111,10 +119,10 @@ def sortino(returns, target_rtn=0, factor=1, return_type='log'):
 
     if isinstance(returns, pd.DataFrame) or isinstance(returns, pd.Series):
         return (returns.mean() - target_rtn) / \
-            np.sqrt(LPM(returns, target_rtn, 2))
+            np.sqrt(LPM(returns, target_rtn, 2)) * factor
     else:
         return np.nanmean(returns - target_rtn) / \
-            np.sqrt(LPM(returns, target_rtn, 2))
+            np.sqrt(LPM(returns, target_rtn, 2)) * factor
     # else:
     #     mean = returns_gmean(returns)
     #     return (mean - target_rtn) / \
@@ -129,16 +137,17 @@ def sortino_iid(df, bench=0, factor=1, return_type='log'):
 
     if return_type == 'pct':
         excess = pct_to_log_return(df - bench)
-        df = pct_to_log_return(df)
         # excess = returns_gmean(df) - bench
     else:
-        excess = df.mean() - bench
+        excess = df - bench
 
-    # neg_rtns = df.loc[df < 0]
-    neg_rtns = df.where(cond=lambda x: x < 0)
-    semi_std = neg_rtns.std(ddof=1)
+    neg_rtns = excess.where(cond=lambda x: x < 0)
+    neg_rtns.fillna(0, inplace=True)
+    semi_std = np.sqrt(neg_rtns.pow(2).mean())
 
-    return factor * excess / semi_std
+    # print(excess, semi_std, np.std(neg_rtns, ddof=0))
+
+    return factor * excess.mean() / semi_std
 
 
 # def rolling_lpm(returns, target_rtn, moment, window):

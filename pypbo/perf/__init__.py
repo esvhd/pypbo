@@ -21,5 +21,6 @@ from .metrics import kappa3
 from .metrics import omega
 
 from .metrics import sortino_iid
+from .metrics import sortino
 
 from .metrics import trading_days
