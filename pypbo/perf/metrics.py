@@ -75,17 +75,17 @@ def kappa(returns, target_rtn, moment, return_type='log'):
 
     if return_type == 'pct':
         # mean = returns_gmean(returns)
-        returns = pct_to_log_return(returns)
-
-    if isinstance(returns, pd.DataFrame) or isinstance(returns, pd.Series):
-        mean = returns.mean()
+        excess = pct_to_log_return(returns - target_rtn)
     else:
-        mean = np.nanmean(returns)
+        excess = returns - target_rtn
 
-    kappa = (mean - target_rtn) / np.power(LPM(returns,
-                                               target_rtn,
-                                               moment=moment),
-                                           1.0 / moment)
+    if isinstance(excess, pd.DataFrame) or isinstance(excess, pd.Series):
+        mean = excess.mean()
+    else:
+        mean = np.nanmean(excess)
+
+    kappa = mean / np.power(LPM(returns, target_rtn, moment=moment),
+                            1.0 / moment)
     return kappa
 
 
@@ -105,6 +105,21 @@ def omega(returns, target_rtn=0, return_type='log'):
                      target_rtn=target_rtn,
                      moment=1,
                      return_type=return_type)
+
+
+def omega_emperical(returns, target_rtn=0, return_type='log'):
+    '''
+    Omega Ratio based on emperical distribution.
+    '''
+    validate_return_type(return_type)
+
+    if return_type == 'pct':
+        returns = pct_to_log_return(returns)
+
+    # TODO
+
+    # TODO Plot emperical distribution CDF versus Normal CDF
+    pass
 
 
 def sortino(returns, target_rtn=0, factor=1, return_type='log'):

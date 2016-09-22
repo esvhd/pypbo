@@ -99,3 +99,36 @@ def test_sortino_iid():
 
     ratio = perf.sortino(data, target_rtn=0, factor=1, return_type='log')
     assert(np.isclose(ratio, 4.417261))
+
+
+def test_omega():
+    '''
+    Based on numerical example found here:
+
+    http://investexcel.net/calculate-the-omega-ratio-with-excel/
+
+    '''
+    data = np.array([.0089,
+                     .0012,
+                     -.002,
+                     .01,
+                     -.0002,
+                     .02,
+                     .03,
+                     .01,
+                     -.003,
+                     .01,
+                     .0102,
+                     -.01])
+    mar = .01
+
+    omega = perf.omega(data, target_rtn=mar, return_type='log')
+
+    assert(np.isclose(omega, .463901689))
+
+    # DataFrame version.
+    df = pd.DataFrame(data)
+
+    omega = perf.omega(df, target_rtn=mar, return_type='log')
+
+    assert(np.isclose(omega, .463901689))
