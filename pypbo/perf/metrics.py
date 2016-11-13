@@ -3,6 +3,7 @@ import pandas as pd
 
 import scipy.stats as ss
 import statsmodels.tsa.stattools as sts
+import statsmodels.tools.tools as stt
 # import statsmodels.stats.diagnostic as ssd
 
 
@@ -24,8 +25,8 @@ def returns_gmean(returns):
     return ss.gmean(1 + returns, axis=0) - 1
 
 
-def log_returns(prices):
-    return np.log(prices / prices.shift(1)).fillna(0)
+def log_returns(prices, n=1):
+    return np.log(prices / prices.shift(n)).fillna(0)
 
 
 def pct_to_log_return(pct_returns):
@@ -107,9 +108,10 @@ def omega(returns, target_rtn=0, return_type='log'):
                      return_type=return_type)
 
 
-def omega_emperical(returns, target_rtn=0, return_type='log'):
+def omega_empirical(returns, target_rtn=0, return_type='log',
+                    plot=False, steps=1000):
     '''
-    Omega Ratio based on emperical distribution.
+    Omega Ratio based on empirical distribution.
     '''
     validate_return_type(return_type)
 
@@ -117,9 +119,30 @@ def omega_emperical(returns, target_rtn=0, return_type='log'):
         returns = pct_to_log_return(returns)
 
     # TODO
+    ecdf = stt.ECDF(returns)
 
-    # TODO Plot emperical distribution CDF versus Normal CDF
-    pass
+    # Generate computation space
+    x = np.linspace(start=returns.min(), stop=returns.max(), num=steps)
+    y = ecdf(x)
+
+    norm_cdf = ss.norm.cdf(x,
+                           loc=returns.mean(),
+                           scale=returns.std(ddof=1))
+
+    # Plot empirical distribution CDF versus Normal CDF with same mean and
+    # stdev
+    if plot:
+        fig, ax = plt.subplots()
+        fig.set_size_inches((12, 6))
+        ax.plot(x, y, c='r', ls='--', lw=1.5, alpha=.8, label='ECDF')
+        ax.plot(x, norm_cdf,
+                alpha=.3, ls='-', c='b', lw=5,
+                label='Normal CDF')
+        ax.legend(loc='best')
+        plt.show(fig)
+        plt.close(fig)
+
+    # TODO calculate omega ratio
 
 
 def sortino(returns, target_rtn=0, factor=1, return_type='log'):
@@ -336,6 +359,37 @@ def sharpe_autocorr_factor(returns, q):
     factor = q / np.sqrt(q + 2 * np.sum(term))
 
     return factor, pval[-2]
+
+
+def annualized_pct_return(total_return, days, ann_factor=365.):
+    '''
+    Parameters:
+        total_return: total pct equity curve, e.g. if return is +50%, then this
+            should be 1.5 (e.g. 1. + .5)
+        days : number of days in period.
+        ann_factor : number of days in a year
+    Returns:
+        Annualized percentage return.
+    '''
+    years = days / ann_factor
+    ann = np.power(total_return, 1 / years) - 1
+    return ann
+
+
+def annualized_log_return(total_return, days, ann_factor=365.):
+    '''
+    Parameters:
+        total_return: total log return, e.g. if return is +50%, then this
+            should be 0.5, e.g. not 1.5.
+        days : number of days in period.
+        ann_factor : number of days in a year
+    Returns:
+        Annualized percentage return.
+    '''
+
+    years = days / ann_factor
+    ann = total_return / years
+    return ann
 
 
 if __name__ == 'main':

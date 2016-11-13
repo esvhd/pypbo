@@ -23,4 +23,9 @@ from .metrics import omega
 from .metrics import sortino_iid
 from .metrics import sortino
 
+# from .metrics import calmar_ratio
+
 from .metrics import trading_days
+
+from .metrics import annualized_pct_return
+from .metrics import annualized_log_return
