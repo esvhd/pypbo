@@ -37,7 +37,8 @@ PBOCore = cls.namedtuple('PBOCore',
 def pbo(M, S, metric_func, threshold,
         n_jobs=1,
         verbose=False,
-        plot=False):
+        plot=False,
+        hist=False):
     '''
     Based on http://papers.ssrn.com/sol3/papers.cfm?abstract_id=2326253
 
@@ -70,13 +71,22 @@ def pbo(M, S, metric_func, threshold,
 
     Parameters:
 
-    M - returns data, numpy or dataframe format.
-    S - chuncks to devided M into, must be even number. Paper suggests setting
-    S = 16. See paper for details of choice of S.
-    metric_func - evaluation function for returns data
-    threshold - used as prob. of OOS Loss calculation cutoff. For Sharpe ratio,
-    this should be 0 to indicate probabilty of loss.
-    n_jobs - if greater than 1 then enable parallel mode
+    M:
+        returns data, numpy or dataframe format.
+    S:
+        chuncks to devided M into, must be even number. Paper suggests setting
+        S = 16. See paper for details of choice of S.
+    metric_func:
+        evaluation function for returns data
+    threshold:
+        used as prob. of OOS Loss calculation cutoff. For Sharpe ratio,
+        this should be 0 to indicate probabilty of loss.
+    n_jobs:
+        if greater than 1 then enable parallel mode
+    hist:
+        Default False, whether to plot histogram for rank of logits.
+        Some problems exist when S >= 10. Need to look at why numpy /
+        matplotlib does it.
 
     Returns:
     PBO result in namedtuple, instance of PBO.
@@ -249,7 +259,7 @@ def pbo(M, S, metric_func, threshold,
                  R_bar_n_star)
 
     if plot:
-        plot_pbo(result)
+        plot_pbo(result, hist=hist)
 
     return result
 
@@ -294,13 +304,14 @@ def pbo_core_calc(Cs,
     return core
 
 
-def plot_pbo(pbo_result):
+def plot_pbo(pbo_result, hist=False):
 
     lm = pbo_result.linear_model
 
+    wid, h = plt.rcParams.get('fig.figsize', (10, 5))
     nplots = 3
     fig, axarr = plt.subplots(nplots, 1, sharex=False)
-    fig.set_size_inches((12, 5 * nplots))
+    fig.set_size_inches((wid, h * nplots))
 
     r2 = lm.rvalue**2
     # adj_r2 = r2 - (1 - r2) / (len(pbo_result.R_n_star) - 2.0)
@@ -313,26 +324,33 @@ def plot_pbo(pbo_result):
                 # sns.lmplot(x='SR_IS', y='SR_OOS',
                 data=pd.DataFrame(dict(SR_IS=pbo_result.R_n_star,
                                        SR_OOS=pbo_result.R_bar_n_star)),
-                scatter_kws={'alpha': .5},
+                scatter_kws={'alpha': .3, 'color': 'g'},
                 line_kws={'alpha': .8,
-                          'label': line_label},
+                          'label': line_label,
+                          'linewidth': 1.,
+                          'color': 'r'},
                 ax=axarr[0])
     axarr[0].set_title('Performance Degradation, IS vs. OOS')
     axarr[0].legend(loc='best')
 
+    # TODO hist is turned off at the moment. Error occurs when S is set to
+    # a relatively large number, such as 16.
     sns.distplot(pbo_result.logits, rug=True, bins=10,
                  ax=axarr[1],
-                 rug_kws={'color': 'r'},
+                 rug_kws={'color': 'r', 'alpha': .5},
                  kde_kws={'color': 'k', 'lw': 2., 'label': 'KDE'},
+                 hist=hist,
                  hist_kws={'histtype': 'step',
-                           'linewidth': 2,
-                           'alpha': 1.,
+                           'linewidth': 2.,
+                           'alpha': .7,
                            'color': 'g'})
+    axarr[1].axvline(0, c='r', ls='--')
     axarr[1].set_title('Hist. of Rank Logits')
     axarr[1].set_xlabel('Logits')
     axarr[1].set_ylabel('Frequency')
 
     pbo_result.stochastic.plot(secondary_y='SD2', ax=axarr[2])
+    axarr[2].right_ax.axhline(0, c='r')
     axarr[2].set_title('Stochastic Dominance')
     axarr[2].set_ylabel('Frequency')
     axarr[2].set_xlabel('SR Optimized vs. Non-Optimized')
