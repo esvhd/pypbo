@@ -21,6 +21,28 @@ TODO:
 * Harvey and Liu 2014 paper on sharpe ratio threshold. [5]
 
 
+Requirements:
+
+Requires `joblib` package for multi-threaded processing.
+
+
+Usage:
+
+```python
+import pypbo as pbo
+import pypbo.perf as perf
+
+def metric(x):
+    return np.sqrt(255) * perf.sharpe_iid(x)
+
+S = 16
+
+pbox = pbo.pbo(rtns_df, S=S,
+               metric_func=metric, threshold=1, n_jobs=4,
+               plot=True, verbose=False, hist=False)
+```
+
+
 Testing
 
 Test scripts use `pytest` package. To run tests, as an example, run the
