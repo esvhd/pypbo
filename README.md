@@ -21,9 +21,10 @@ Python implmenetation of Probability of Backtest Overfitting. [1]
 * Harvey and Liu 2014 paper on sharpe ratio threshold. [5]
 
 
-## Requirements:
+## Required Packages:
 
-Requires `joblib` package for multi-threaded processing.
+`joblib`
+`seaborn`
 
 
 ## Usage:
