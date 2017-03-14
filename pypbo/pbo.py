@@ -3,7 +3,8 @@ import itertools as itr
 import scipy.stats as ss
 import scipy.special as spec
 import seaborn.apionly as sns
-import statsmodels.tools.tools as stt
+#import statsmodels.tools.tools as stt
+import statsmodels.distributions as smd
 import matplotlib.pyplot as plt
 import collections as cls
 import pandas as pd
@@ -231,10 +232,10 @@ def pbo(M, S, metric_func, threshold,
     # Stochastic dominance
     y = np.linspace(min(R_bar_n_star), max(R_bar_n_star),
                     endpoint=True, num=1000)
-    R_bar_n_star_cdf = stt.ECDF(R_bar_n_star)
+    R_bar_n_star_cdf = smd.ECDF(R_bar_n_star)
     optimized = R_bar_n_star_cdf(y)
 
-    R_bar_cdf = stt.ECDF(np.concatenate(R_bar))
+    R_bar_cdf = smd.ECDF(np.concatenate(R_bar))
     non_optimized = R_bar_cdf(y)
 
     dom_df = pd.DataFrame(dict(optimized_IS=optimized,
