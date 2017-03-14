@@ -23,9 +23,9 @@ Python implmenetation of Probability of Backtest Overfitting. [1]
 
 ## Required Packages:
 
-`joblib`
-`seaborn`
-
+* `joblib`
+* `seaborn`
+* `statsmodels 0.8.0`
 
 ## Usage:
 
