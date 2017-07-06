@@ -392,5 +392,24 @@ def annualized_log_return(total_return, days, ann_factor=365.):
     return ann
 
 
+def tail_ratio(returns):
+    '''
+    Determines the ratio between the right (95%) and left tail (5%).
+    For example, a ratio of 0.25 means that losses are four times
+    as bad as profits.
+    Parameters
+    ----------
+    returns : pd.Series
+        Daily returns of the strategy, noncumulative.
+         - See full explanation in tears.create_full_tear_sheet.
+    Returns
+    -------
+    float
+        tail ratio
+    '''
+    return np.abs(np.percentile(returns, 95)) / \
+        np.abs(np.percentile(returns, 5))
+
+
 if __name__ == 'main':
     pass
