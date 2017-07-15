@@ -10,8 +10,8 @@ import statsmodels.tools.tools as stt
 # maxzero = lambda x: np.maximum(x, 0)
 # vmax = np.vectorize(np.maximum)
 
-# default no. of trading days in a year, 255.
-trading_days = 255
+# default no. of trading days in a year, 252.
+trading_days = 252
 
 
 def returns_gmean(returns):
@@ -25,8 +25,12 @@ def returns_gmean(returns):
     return ss.gmean(1 + returns, axis=0) - 1
 
 
-def log_returns(prices, n=1):
-    return np.log(prices / prices.shift(n)).fillna(0)
+def log_returns(prices, n=1, fillna=True):
+    # not filling NAs
+    rtns = np.log(prices) - np.log(prices.shift(n))
+    if fillna:
+        rtns.fillna(0)
+    return rtns
 
 
 def pct_to_log_return(pct_returns):
@@ -308,7 +312,7 @@ def sharpe_non_iid(df, bench=0, q=trading_days, p_critical=.05,
         df : return series
         bench : risk free rate, default 0
         q : time aggregation frequency, e.g. 12 for monthly to annual.
-            Default 255.
+            Default 252.
         p_critical : critical p-value to reject Ljung-Box Null, default 0.05.
         return_type : {'log', 'pct'}, return series type, log or arithmetic
             percentages.
@@ -346,7 +350,7 @@ def sharpe_autocorr_factor(returns, q):
     Parameters:
         returns : return sereis
         q : time aggregation factor, e.g. 12 for monthly to annual,
-        255 for daily to annual
+        252 for daily to annual
 
     Returns:
         factor : time aggregation factor
@@ -392,7 +396,7 @@ def annualized_log_return(total_return, days, ann_factor=365.):
     return ann
 
 
-def tail_ratio(returns):
+def tail_ratio(returns, tail=5):
     '''
     Determines the ratio between the right (95%) and left tail (5%).
     For example, a ratio of 0.25 means that losses are four times
@@ -407,8 +411,8 @@ def tail_ratio(returns):
     float
         tail ratio
     '''
-    return np.abs(np.percentile(returns, 95)) / \
-        np.abs(np.percentile(returns, 5))
+    return np.abs(np.nanpercentile(returns, 100-tail)) / \
+        np.abs(np.nanpercentile(returns, tail))
 
 
 if __name__ == 'main':

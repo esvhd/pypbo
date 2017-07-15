@@ -23,7 +23,10 @@ from .metrics import omega
 from .metrics import sortino_iid
 from .metrics import sortino
 
+# can't have calmar ratio here yet as drawdown functions not present.
 # from .metrics import calmar_ratio
+
+from .metrics import tail_ratio
 
 from .metrics import trading_days
 
