@@ -415,5 +415,20 @@ def tail_ratio(returns, tail=5):
         np.abs(np.nanpercentile(returns, tail))
 
 
+def drawdown(equity):
+    '''
+    Drawdown curve.
+
+    Args:
+        equity (DataFrame or Series/Array like): equity curve
+
+    Returns:
+        drawdown curve in percentage terms from peaks.
+    '''
+    highs = equity.expanding().max()
+    dd = equity / highs - 1.
+    return dd
+
+
 if __name__ == 'main':
     pass

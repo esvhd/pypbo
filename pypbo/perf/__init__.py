@@ -32,3 +32,5 @@ from .metrics import trading_days
 
 from .metrics import annualized_pct_return
 from .metrics import annualized_log_return
+
+from .metrics import drawdown
