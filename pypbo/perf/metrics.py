@@ -425,6 +425,8 @@ def drawdown(equity):
     Returns:
         drawdown curve in percentage terms from peaks.
     '''
+    if isinstance(equity, np.ndarray) or isinstance(equity, list):
+        equity = pd.DataFrame(equity)
     highs = equity.expanding().max()
     dd = equity / highs - 1.
     return dd
