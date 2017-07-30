@@ -365,7 +365,7 @@ def sharpe_autocorr_factor(returns, q):
     return factor, pval[-2]
 
 
-def annualized_pct_return(total_return, days, ann_factor=365.):
+def annualized_pct_return(total_return, days, ann_factor=trading_days):
     '''
     Parameters:
         total_return: total pct equity curve, e.g. if return is +50%, then this
@@ -380,7 +380,7 @@ def annualized_pct_return(total_return, days, ann_factor=365.):
     return ann
 
 
-def annualized_log_return(total_return, days, ann_factor=365.):
+def annualized_log_return(total_return, days, ann_factor=trading_days):
     '''
     Parameters:
         total_return: total log return, e.g. if return is +50%, then this
