@@ -171,17 +171,17 @@ def sortino(returns, target_rtn=0, factor=1, return_type='log'):
     #         np.sqrt(LPM(returns, target_rtn, 2)) * factor
 
 
-def sortino_iid(df, bench=0, factor=1, return_type='log'):
+def sortino_iid(rtns, bench=0, factor=1, return_type='log'):
     validate_return_type(return_type)
 
-    if isinstance(df, np.ndarray):
-        df = pd.DataFrame(df)
+    if isinstance(rtns, np.ndarray):
+        rtns = pd.DataFrame(rtns)
 
     if return_type == 'pct':
-        excess = pct_to_log_return(df - bench)
-        # excess = returns_gmean(df) - bench
+        excess = pct_to_log_return(rtns - bench)
+        # excess = returns_gmean(rtns) - bench
     else:
-        excess = df - bench
+        excess = rtns - bench
 
     neg_rtns = excess.where(cond=lambda x: x < 0)
     neg_rtns.fillna(0, inplace=True)
@@ -218,14 +218,14 @@ def sortino_iid(df, bench=0, factor=1, return_type='log'):
 #         return np.nanmean(excess) / np.nanstd(excess, ddof=1)
 
 
-def sharpe_iid(df, bench=0, factor=1, return_type='log'):
+def sharpe_iid(rtns, bench=0, factor=1, return_type='log'):
     validate_return_type(return_type)
 
-    excess = df - bench
+    excess = rtns - bench
     if return_type == 'pct':
         excess = pct_to_log_return(excess)
 
-    if isinstance(df, pd.DataFrame) or isinstance(df, pd.Series):
+    if isinstance(rtns, pd.DataFrame) or isinstance(rtns, pd.Series):
         # return factor * excess.mean() / excess.std(ddof=1)
         # if return_type == 'pct':
         #     excess_mean = returns_gmean(excess)
@@ -241,23 +241,23 @@ def sharpe_iid(df, bench=0, factor=1, return_type='log'):
         return factor * excess_mean / np.nanstd(excess, axis=0, ddof=1)
 
 
-def sharpe_iid_rolling(df, window, bench=0, factor=1, return_type='log'):
+def sharpe_iid_rolling(rtns, window, bench=0, factor=1, return_type='log'):
     '''
     Rolling sharpe ratio, unadjusted by time aggregation.
     '''
     validate_return_type(return_type)
 
     if return_type == 'pct':
-        excess = pct_to_log_return(df - bench)
+        excess = pct_to_log_return(rtns - bench)
     else:
-        excess = df - bench
+        excess = rtns - bench
 
     roll = excess.rolling(window=window)
     # return factor * (roll.mean() - bench) / roll.std(ddof=1)
     return factor * roll.mean() / roll.std(ddof=1)
 
 
-def sharpe_iid_adjusted(df, bench=0, factor=1, return_type='log'):
+def sharpe_iid_adjusted(rtns, bench=0, factor=1, return_type='log'):
     '''
     Adjusted Sharpe Ratio, acount for skew and kurtosis in return series.
 
@@ -266,20 +266,20 @@ def sharpe_iid_adjusted(df, bench=0, factor=1, return_type='log'):
     https://www.google.co.uk/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&cad=rja&uact=8&ved=0ahUKEwi42ZKgg_TOAhVFbhQKHSXPDY0QFggcMAA&url=http%3A%2F%2Fwww.icmacentre.ac.uk%2Fpdf%2Fdiscussion%2FDP2006-10.pdf&usg=AFQjCNF9axYf4Gbz4TVdJUdM8o2M2rz-jg&sig2=pXHZ7M-n-PtNd2d29xhRBw
 
     Parameters:
-        df : returns dataframe. Default should be log returns
+        rtns : returns dataframe. Default should be log returns
         bench : benchmark return
         factor : time aggregation factor, default 1, i.e. not adjusted.
         return_type : {'log', 'pct'}, return series type, log or arithmetic
             percentages.
     '''
-    sr = sharpe_iid(df, bench=bench, factor=1, return_type=return_type)
+    sr = sharpe_iid(rtns, bench=bench, factor=1, return_type=return_type)
 
-    if isinstance(df, pd.DataFrame) or isinstance(df, pd.Series):
-        skew = df.skew()
-        excess_kurt = df.kurtosis()
+    if isinstance(rtns, pd.DataFrame) or isinstance(rtns, pd.Series):
+        skew = rtns.skew()
+        excess_kurt = rtns.kurtosis()
     else:
-        skew = ss.skew(df, bias=False, nan_policy='omit')
-        excess_kurt = ss.kurtosis(df, bias=False, fisher=True,
+        skew = ss.skew(rtns, bias=False, nan_policy='omit')
+        excess_kurt = ss.kurtosis(rtns, bias=False, fisher=True,
                                   nan_policy='omit')
     return adjusted_sharpe(sr, skew, excess_kurt) * factor
 
@@ -301,7 +301,7 @@ def adjusted_sharpe(sr, skew, excess_kurtosis):
     return sr * (1 + (skew / 6.0) * sr + excess_kurtosis / 24.0 * sr**2)
 
 
-def sharpe_non_iid(df, bench=0, q=trading_days, p_critical=.05,
+def sharpe_non_iid(rtns, bench=0, q=trading_days, p_critical=.05,
                    return_type='log'):
     '''
     Return Sharpe Ratio adjusted for auto-correlation, iff Ljung-Box test
@@ -309,7 +309,7 @@ def sharpe_non_iid(df, bench=0, q=trading_days, p_critical=.05,
     Andrew Lo (2002).
 
     Parameters:
-        df : return series
+        rtns : return series
         bench : risk free rate, default 0
         q : time aggregation frequency, e.g. 12 for monthly to annual.
             Default 252.
@@ -320,21 +320,21 @@ def sharpe_non_iid(df, bench=0, q=trading_days, p_critical=.05,
     if type(q) is not np.int64 or type(q) is not np.int32:
         q = np.round(q, 0).astype(np.int64)
 
-    sr = sharpe_iid(df, bench=bench, factor=1, return_type=return_type)
+    sr = sharpe_iid(rtns, bench=bench, factor=1, return_type=return_type)
 
-    if not isinstance(df, pd.DataFrame):
-        adj_factor, pval = sharpe_autocorr_factor(df, q=q)
+    if not isinstance(rtns, pd.DataFrame):
+        adj_factor, pval = sharpe_autocorr_factor(rtns, q=q)
         if pval < p_critical:
             # reject Ljung-Box Null, there is serial correlation
             return sr * adj_factor
         else:
             return sr * np.sqrt(q)
     else:
-        tests = [sharpe_autocorr_factor(df[col].dropna().values, q=q)
-                 for col in df.columns]
+        tests = [sharpe_autocorr_factor(rtns[col].dropna().values, q=q)
+                 for col in rtns.columns]
         factors = [adj_factor if pval < p_critical else np.sqrt(q)
                    for adj_factor, pval in tests]
-        res = pd.Series(factors, index=df.columns)
+        res = pd.Series(factors, index=rtns.columns)
 
         return res.multiply(sr)
 
@@ -430,6 +430,40 @@ def drawdown(equity):
     highs = equity.expanding().max()
     dd = equity / highs - 1.
     return dd
+
+
+def calmar_ratio(returns, factor=trading_days, log=True):
+    '''
+    CALMAR ratio: annualized return over  max drawdown, for last 36
+    months.
+
+    See Wikipedia: https://en.wikipedia.org/wiki/Calmar_ratio
+
+    Parameters:
+        returns : return series
+    Returns:
+        Calmar ratio, calculated with normal percentage returns.
+    '''
+    if not log:
+        returns = pct_to_log_return(returns)
+
+    num_years = float(len(returns)) / factor
+
+    if not log:
+        cum_return = (1 + returns).cumprod()
+    else:
+        # log return
+        cum_return = np.exp(returns.cumsum())
+
+    if isinstance(cum_return, np.ndarray) or isinstance(cum_return, list):
+        cum_return = pd.Series(cum_return)
+
+    annual_return = np.power(cum_return.values[-1], 1 / num_years) - 1
+
+    # max_dd = np.abs(get_drawdown(cum_return)['drawdown'].min())
+    max_dd = np.abs(drawdown(cum_return).min())
+
+    return annual_return / max_dd
 
 
 if __name__ == 'main':

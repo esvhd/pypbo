@@ -34,3 +34,4 @@ from .metrics import annualized_pct_return
 from .metrics import annualized_log_return
 
 from .metrics import drawdown
+from .metrics import calmar_ratio
