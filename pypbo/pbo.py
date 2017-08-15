@@ -2,7 +2,7 @@ import numpy as np
 import itertools as itr
 import scipy.stats as ss
 import scipy.special as spec
-import seaborn.apionly as sns
+import seaborn as sns
 # import statsmodels.tools.tools as stt
 import statsmodels.distributions.empirical_distribution as smd
 import matplotlib.pyplot as plt

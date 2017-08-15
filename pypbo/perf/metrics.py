@@ -376,7 +376,7 @@ def annualized_pct_return(total_return, days, ann_factor=trading_days):
         Annualized percentage return.
     '''
     years = days / ann_factor
-    ann = np.power(total_return, 1 / years) - 1
+    ann = np.power(total_return, 1. / years) - 1
     return ann
 
 
