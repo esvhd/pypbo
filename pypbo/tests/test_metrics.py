@@ -139,8 +139,8 @@ def test_annualized_log_return():
     test_val = perf.annualized_log_return(log_rtn, days=827, ann_factor=365.)
     assert(np.isclose(test_val, 0.22716870320390978))
 
+
 def test_annualized_pct_return():
     tr = 1.673150317863489
     test_val = perf.annualized_pct_return(tr, days=827, ann_factor=365.)
     assert(np.isclose(test_val, 0.25504157961707952))
-
