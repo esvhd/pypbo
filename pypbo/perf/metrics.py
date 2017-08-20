@@ -320,6 +320,10 @@ def sharpe_non_iid(rtns, bench=0, q=trading_days, p_critical=.05,
     if type(q) is not np.int64 or type(q) is not np.int32:
         q = np.round(q, 0).astype(np.int64)
 
+    if len(rtns) <= q:
+        raise AssertionError('No. of returns [{}] must be greated than {}'
+                             .format(len(rtns), q))
+
     sr = sharpe_iid(rtns, bench=bench, factor=1, return_type=return_type)
 
     if not isinstance(rtns, pd.DataFrame):
@@ -411,7 +415,7 @@ def tail_ratio(returns, tail=5):
     float
         tail ratio
     '''
-    return np.abs(np.nanpercentile(returns, 100-tail)) / \
+    return np.abs(np.nanpercentile(returns, 100 - tail)) / \
         np.abs(np.nanpercentile(returns, tail))
 
 
