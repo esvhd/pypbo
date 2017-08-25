@@ -72,6 +72,10 @@ def test_sharpe_iid():
 
     assert(np.isclose(sharpe, .834364))
 
+    sharpe = perf.sharpe_iid(data, bench=.05, factor=252, return_type='log')
+
+    assert(np.isclose(sharpe, .834364 * np.sqrt(252)))
+
     sharpe = perf.sharpe_iid(data, bench=.05, factor=1, return_type='pct')
 
     assert(np.isclose(sharpe, 0.8189144744629443))
@@ -101,6 +105,10 @@ def test_sortino_iid():
     ratio = perf.sortino_iid(data, bench=0, factor=1, return_type='log')
     print(ratio)
     assert(np.isclose(ratio, 4.417261))
+
+    ratio = perf.sortino_iid(data, bench=0, factor=252, return_type='log')
+    print(ratio)
+    assert(np.isclose(ratio, 4.417261 * np.sqrt(252)))
 
     ratio = perf.sortino(data, target_rtn=0, factor=1, return_type='log')
     assert(np.isclose(ratio, 4.417261))
