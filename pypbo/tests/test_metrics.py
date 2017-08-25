@@ -16,12 +16,17 @@ def test_log_returns():
     '''
     # generate data
     np.random.seed(7)
-    tests = pd.Series([1 + np.random.rand() for _ in range(100)])
-    log_rtns = perf.log_returns(tests)
+    tests = pd.Series([1 + np.random.rand() for _ in range(10)])
+    log_rtns = perf.log_returns(tests, fillna=True)
 
-    reconstruct = tests.head(1).values * np.exp(log_rtns.cumsum())
+    print(log_rtns)
 
-    assert(np.allclose(tests, reconstruct))
+    reconstruct = tests.values[0] * np.exp(log_rtns.cumsum())
+
+    print(tests)
+    print(reconstruct)
+
+    assert(np.allclose(tests - reconstruct, 0.))
 
 
 def test_pct_to_log_return():

@@ -25,11 +25,11 @@ def returns_gmean(returns):
     return ss.gmean(1 + returns, axis=0) - 1
 
 
-def log_returns(prices, n=1, fillna=True):
+def log_returns(prices, n=1, fillna=False):
     # not filling NAs
     rtns = np.log(prices) - np.log(prices.shift(n))
     if fillna:
-        rtns.fillna(0)
+        rtns.fillna(0, inplace=True)
     return rtns
 
 
@@ -161,14 +161,10 @@ def sortino(returns, target_rtn=0, factor=1, return_type='log'):
 
     if isinstance(returns, pd.DataFrame) or isinstance(returns, pd.Series):
         return (returns.mean() - target_rtn) / \
-            np.sqrt(LPM(returns, target_rtn, 2)) * factor
+            np.sqrt(LPM(returns, target_rtn, 2)) * np.sqrt(factor)
     else:
         return np.nanmean(returns - target_rtn) / \
-            np.sqrt(LPM(returns, target_rtn, 2)) * factor
-    # else:
-    #     mean = returns_gmean(returns)
-    #     return (mean - target_rtn) / \
-    #         np.sqrt(LPM(returns, target_rtn, 2)) * factor
+            np.sqrt(LPM(returns, target_rtn, 2)) * np.sqrt(factor)
 
 
 def sortino_iid(rtns, bench=0, factor=1, return_type='log'):
@@ -189,7 +185,7 @@ def sortino_iid(rtns, bench=0, factor=1, return_type='log'):
 
     # print(excess, semi_std, np.std(neg_rtns, ddof=0))
 
-    return factor * excess.mean() / semi_std
+    return np.sqrt(factor) * excess.mean() / semi_std
 
 
 # def rolling_lpm(returns, target_rtn, moment, window):
@@ -226,19 +222,20 @@ def sharpe_iid(rtns, bench=0, factor=1, return_type='log'):
         excess = pct_to_log_return(excess)
 
     if isinstance(rtns, pd.DataFrame) or isinstance(rtns, pd.Series):
-        # return factor * excess.mean() / excess.std(ddof=1)
+        # return np.sqrt(factor) * excess.mean() / excess.std(ddof=1)
         # if return_type == 'pct':
         #     excess_mean = returns_gmean(excess)
         # else:
         excess_mean = excess.mean()
-        return factor * excess_mean / excess.std(ddof=1)
+        return np.sqrt(factor) * excess_mean / excess.std(ddof=1)
     else:
         # numpy way
         # if return_type == 'pct':
         #     excess_mean = returns_gmean(excess)
         # else:
         excess_mean = np.nanmean(excess, axis=0)
-        return factor * excess_mean / np.nanstd(excess, axis=0, ddof=1)
+        return np.sqrt(factor) * excess_mean / np.nanstd(excess,
+                                                         axis=0, ddof=1)
 
 
 def sharpe_iid_rolling(rtns, window, bench=0, factor=1, return_type='log'):
@@ -253,8 +250,7 @@ def sharpe_iid_rolling(rtns, window, bench=0, factor=1, return_type='log'):
         excess = rtns - bench
 
     roll = excess.rolling(window=window)
-    # return factor * (roll.mean() - bench) / roll.std(ddof=1)
-    return factor * roll.mean() / roll.std(ddof=1)
+    return np.sqrt(factor) * roll.mean() / roll.std(ddof=1)
 
 
 def sharpe_iid_adjusted(rtns, bench=0, factor=1, return_type='log'):
@@ -281,7 +277,7 @@ def sharpe_iid_adjusted(rtns, bench=0, factor=1, return_type='log'):
         skew = ss.skew(rtns, bias=False, nan_policy='omit')
         excess_kurt = ss.kurtosis(rtns, bias=False, fisher=True,
                                   nan_policy='omit')
-    return adjusted_sharpe(sr, skew, excess_kurt) * factor
+    return adjusted_sharpe(sr, skew, excess_kurt) * np.sqrt(factor)
 
 
 def adjusted_sharpe(sr, skew, excess_kurtosis):
