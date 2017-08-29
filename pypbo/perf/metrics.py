@@ -6,6 +6,7 @@ import statsmodels.tsa.stattools as sts
 import statsmodels.tools.tools as stt
 # import statsmodels.stats.diagnostic as ssd
 
+import warnings
 
 # maxzero = lambda x: np.maximum(x, 0)
 # vmax = np.vectorize(np.maximum)
@@ -317,8 +318,17 @@ def sharpe_non_iid(rtns, bench=0, q=trading_days, p_critical=.05,
         q = np.round(q, 0).astype(np.int64)
 
     if len(rtns) <= q:
-        raise AssertionError('No. of returns [{}] must be greated than {}'
-                             .format(len(rtns), q))
+        # raise AssertionError('No. of returns [{}] must be greated than {}'
+        #                      .format(len(rtns), q))
+        warnings.warn('Sharpe Non-IID: No. of returns [{}] must be greated'
+                      ' than {}. NaN returned.'.format(len(rtns), q))
+        dim = rtns.shape
+        if len(dim) < 2:
+            return np.nan
+        else:
+            res = np.empty((1, dim[1]))
+            res[:] = np.nan
+            return res
 
     sr = sharpe_iid(rtns, bench=bench, factor=1, return_type=return_type)
 
@@ -365,6 +375,25 @@ def sharpe_autocorr_factor(returns, q):
     return factor, pval[-2]
 
 
+def annual_geometric_returns(rtns, ann_factor=trading_days, log=True):
+    '''
+    Take a return series and produce annualized geometric return.
+
+    Args:
+        rtns (TYPE): return series, log or pct returns
+        ann_factor (TYPE, optional): annual day count factor
+        log (bool, optional): True if log return is given. Default True.
+
+    Returns:
+        float, annualized geometric return
+    '''
+    if not log:
+        rtns = pct_to_log_return(rtns)
+    total_rtn = np.exp(rtns.sum())
+    geo = np.power(total_rtn, ann_factor / len(rtns)) - 1
+    return geo
+
+
 def annualized_pct_return(total_return, days, ann_factor=trading_days):
     '''
     Parameters:
@@ -396,7 +425,7 @@ def annualized_log_return(total_return, days, ann_factor=trading_days):
     return ann
 
 
-def tail_ratio(returns, tail=5):
+def tail_ratio(returns, tail_prob=5):
     '''
     Determines the ratio between the right (95%) and left tail (5%).
     For example, a ratio of 0.25 means that losses are four times
@@ -409,10 +438,24 @@ def tail_ratio(returns, tail=5):
     Returns
     -------
     float
-        tail ratio
+        tail_prob ratio
     '''
-    return np.abs(np.nanpercentile(returns, 100 - tail)) / \
-        np.abs(np.nanpercentile(returns, tail))
+    if isinstance(returns, pd.Series) or isinstance(returns, pd.DataFrame):
+        tail_prob /= 100.
+        top = returns.quantile(q=1 - tail_prob)
+        bottom = returns.quantile(q=tail_prob)
+        return np.abs(top / bottom)
+    else:
+        return np.abs(np.nanpercentile(returns, 100 - tail_prob)) / \
+            np.abs(np.nanpercentile(returns, tail_prob))
+
+
+def max_drawdown(equity):
+    return drawdown(equity).min()
+
+
+def max_drawdown_from_rtns(returns, log=True):
+    return drawdown_from_rtns(returns, log=log).min()
 
 
 def drawdown(equity):
@@ -430,6 +473,21 @@ def drawdown(equity):
     highs = equity.expanding().max()
     dd = equity / highs - 1.
     return dd
+
+
+def drawdown_from_rtns(returns, log=True):
+    '''
+    Drowdown curve from returns.
+
+    Args:
+        returns (array like): asset returns
+        log (bool, optional): log returns or not. Default True
+
+    Returns:
+        TYPE
+    '''
+    equity = np.exp(returns.cumsum())
+    return drawdown(equity)
 
 
 def calmar_ratio(returns, factor=trading_days, log=True):

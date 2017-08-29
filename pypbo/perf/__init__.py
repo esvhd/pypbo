@@ -30,8 +30,12 @@ from .metrics import tail_ratio
 
 from .metrics import trading_days
 
+from .metrics import annual_geometric_returns
 from .metrics import annualized_pct_return
 from .metrics import annualized_log_return
 
 from .metrics import drawdown
 from .metrics import calmar_ratio
+from .metrics import drawdown_from_rtns
+from .metrics import max_drawdown
+from .metrics import max_drawdown_from_rtns
