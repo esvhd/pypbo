@@ -46,14 +46,14 @@ def log_to_pct_return(log_returns):
     return np.exp(log_returns) - 1
 
 
-def validate_mean_method(method):
-    if method not in {'gmean', 'simple'}:
-        raise AssertionError('mean_method can only be {"gmean", "simple"}')
+# def validate_mean_method(method):
+#     if method not in {'gmean', 'simple'}:
+#         raise AssertionError('mean_method can only be {"gmean", "simple"}')
 
 
-def validate_return_type(return_type):
-    if return_type not in {'pct', 'log'}:
-        raise AssertionError('mean_method can only be {"pct", "log"}')
+# def validate_return_type(return_type):
+#     if return_type not in {'pct', 'log'}:
+#         raise AssertionError('mean_method can only be {"pct", "log"}')
 
 
 def maxzero(x):
@@ -72,18 +72,18 @@ def LPM(returns, target_rtn, moment):
         return np.nanmean(np.power(adj_returns, moment), axis=0)
 
 
-def kappa(returns, target_rtn, moment, return_type='log'):
+def kappa(returns, target_rtn, moment, log=True):
     '''
     Geometric mean should be used when returns are percentage returns.
     Arithmetic mean should be used when returns are log returns.
     '''
-    validate_return_type(return_type)
+    # validate_return_type(return_type)
 
-    if return_type == 'pct':
+    if log:
+        excess = returns - target_rtn
+    else:
         # mean = returns_gmean(returns)
         excess = pct_to_log_return(returns - target_rtn)
-    else:
-        excess = returns - target_rtn
 
     if isinstance(excess, pd.DataFrame) or isinstance(excess, pd.Series):
         mean = excess.mean()
@@ -95,32 +95,31 @@ def kappa(returns, target_rtn, moment, return_type='log'):
     return kappa
 
 
-def kappa3(returns, target_rtn=0, return_type='log'):
+def kappa3(returns, target_rtn=0, log=True):
     '''
     Kappa 3
     '''
-    return kappa(returns, target_rtn=target_rtn, moment=3,
-                 return_type=return_type)
+    return kappa(returns, target_rtn=target_rtn, moment=3, log=log)
 
 
-def omega(returns, target_rtn=0, return_type='log'):
+def omega(returns, target_rtn=0, log=True):
     '''
     Omega Ratio
     '''
     return 1 + kappa(returns,
                      target_rtn=target_rtn,
                      moment=1,
-                     return_type=return_type)
+                     log=log)
 
 
-def omega_empirical(returns, target_rtn=0, return_type='log',
+def omega_empirical(returns, target_rtn=0, log=True,
                     plot=False, steps=1000):
     '''
     Omega Ratio based on empirical distribution.
     '''
-    validate_return_type(return_type)
+    # validate_return_type(return_type)
 
-    if return_type == 'pct':
+    if not log:
         returns = pct_to_log_return(returns)
 
     # TODO
@@ -150,14 +149,14 @@ def omega_empirical(returns, target_rtn=0, return_type='log',
     # TODO calculate omega ratio
 
 
-def sortino(returns, target_rtn=0, factor=1, return_type='log'):
+def sortino(returns, target_rtn=0, factor=1, log=True):
     '''
     Sortino I.I.D ratio caluclated using Lower Partial Moment.
     Result should be the same as `sortino_iid`.
     '''
-    validate_return_type(return_type)
+    # validate_return_type(return_type)
 
-    if return_type == 'pct':
+    if not log:
         returns = pct_to_log_return(returns)
 
     if isinstance(returns, pd.DataFrame) or isinstance(returns, pd.Series):
@@ -168,17 +167,17 @@ def sortino(returns, target_rtn=0, factor=1, return_type='log'):
             np.sqrt(LPM(returns, target_rtn, 2)) * np.sqrt(factor)
 
 
-def sortino_iid(rtns, bench=0, factor=1, return_type='log'):
-    validate_return_type(return_type)
+def sortino_iid(rtns, bench=0, factor=1, log=True):
+    # validate_return_type(return_type)
 
     if isinstance(rtns, np.ndarray):
         rtns = pd.DataFrame(rtns)
 
-    if return_type == 'pct':
+    if log:
+        excess = rtns - bench
+    else:
         excess = pct_to_log_return(rtns - bench)
         # excess = returns_gmean(rtns) - bench
-    else:
-        excess = rtns - bench
 
     neg_rtns = excess.where(cond=lambda x: x < 0)
     neg_rtns.fillna(0, inplace=True)
@@ -215,11 +214,11 @@ def sortino_iid(rtns, bench=0, factor=1, return_type='log'):
 #         return np.nanmean(excess) / np.nanstd(excess, ddof=1)
 
 
-def sharpe_iid(rtns, bench=0, factor=1, return_type='log'):
-    validate_return_type(return_type)
+def sharpe_iid(rtns, bench=0, factor=1, log=True):
+    # validate_return_type(return_type)
 
     excess = rtns - bench
-    if return_type == 'pct':
+    if not log:
         excess = pct_to_log_return(excess)
 
     if isinstance(rtns, pd.DataFrame) or isinstance(rtns, pd.Series):
@@ -239,22 +238,22 @@ def sharpe_iid(rtns, bench=0, factor=1, return_type='log'):
                                                          axis=0, ddof=1)
 
 
-def sharpe_iid_rolling(rtns, window, bench=0, factor=1, return_type='log'):
+def sharpe_iid_rolling(rtns, window, bench=0, factor=1, log=True):
     '''
     Rolling sharpe ratio, unadjusted by time aggregation.
     '''
-    validate_return_type(return_type)
+    # validate_return_type(return_type)
 
-    if return_type == 'pct':
-        excess = pct_to_log_return(rtns - bench)
-    else:
+    if log:
         excess = rtns - bench
+    else:
+        excess = pct_to_log_return(rtns - bench)
 
     roll = excess.rolling(window=window)
     return np.sqrt(factor) * roll.mean() / roll.std(ddof=1)
 
 
-def sharpe_iid_adjusted(rtns, bench=0, factor=1, return_type='log'):
+def sharpe_iid_adjusted(rtns, bench=0, factor=1, log=True):
     '''
     Adjusted Sharpe Ratio, acount for skew and kurtosis in return series.
 
@@ -263,13 +262,19 @@ def sharpe_iid_adjusted(rtns, bench=0, factor=1, return_type='log'):
     https://www.google.co.uk/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&cad=rja&uact=8&ved=0ahUKEwi42ZKgg_TOAhVFbhQKHSXPDY0QFggcMAA&url=http%3A%2F%2Fwww.icmacentre.ac.uk%2Fpdf%2Fdiscussion%2FDP2006-10.pdf&usg=AFQjCNF9axYf4Gbz4TVdJUdM8o2M2rz-jg&sig2=pXHZ7M-n-PtNd2d29xhRBw
 
     Parameters:
-        rtns : returns dataframe. Default should be log returns
-        bench : benchmark return
-        factor : time aggregation factor, default 1, i.e. not adjusted.
-        return_type : {'log', 'pct'}, return series type, log or arithmetic
+        rtns: returns dataframe. Default should be log returns
+        bench: benchmark return
+        factor: time aggregation factor, default 1, i.e. not adjusted.
+        log (bool, optional):
+
+    Deleted Parameters:
+        return_type: {'log', 'pct'}, return series type, log or arithmetic
             percentages.
+
+    Returns:
+        TYPE
     '''
-    sr = sharpe_iid(rtns, bench=bench, factor=1, return_type=return_type)
+    sr = sharpe_iid(rtns, bench=bench, factor=1, log=log)
 
     if isinstance(rtns, pd.DataFrame) or isinstance(rtns, pd.Series):
         skew = rtns.skew()
@@ -299,20 +304,26 @@ def adjusted_sharpe(sr, skew, excess_kurtosis):
 
 
 def sharpe_non_iid(rtns, bench=0, q=trading_days, p_critical=.05,
-                   return_type='log'):
+                   log=True):
     '''
     Return Sharpe Ratio adjusted for auto-correlation, iff Ljung-Box test
     indicates that the return series exhibits auto-correlation. Based on
     Andrew Lo (2002).
 
     Parameters:
-        rtns : return series
-        bench : risk free rate, default 0
-        q : time aggregation frequency, e.g. 12 for monthly to annual.
+        rtns: return series
+        bench: risk free rate, default 0
+        q: time aggregation frequency, e.g. 12 for monthly to annual.
             Default 252.
-        p_critical : critical p-value to reject Ljung-Box Null, default 0.05.
-        return_type : {'log', 'pct'}, return series type, log or arithmetic
+        p_critical: critical p-value to reject Ljung-Box Null, default 0.05.
+        log (bool, optional): True if rtns is log returns, default True
+
+    Deleted Parameters:
+        return_type: {'log', 'pct'}, return series type, log or arithmetic
             percentages.
+
+    Returns:
+        TYPE
     '''
     if type(q) is not np.int64 or type(q) is not np.int32:
         q = np.round(q, 0).astype(np.int64)
@@ -330,7 +341,7 @@ def sharpe_non_iid(rtns, bench=0, q=trading_days, p_critical=.05,
             res[:] = np.nan
             return res
 
-    sr = sharpe_iid(rtns, bench=bench, factor=1, return_type=return_type)
+    sr = sharpe_iid(rtns, bench=bench, factor=1, log=log)
 
     if not isinstance(rtns, pd.DataFrame):
         adj_factor, pval = sharpe_autocorr_factor(rtns, q=q)
@@ -486,7 +497,10 @@ def drawdown_from_rtns(returns, log=True):
     Returns:
         TYPE
     '''
-    equity = np.exp(returns.cumsum())
+    if log:
+        equity = np.exp(returns.cumsum())
+    else:
+        equity = (1 + returns).cumprod()
     return drawdown(equity)
 
 
