@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import collections as cls
 import pandas as pd
 import joblib as job
+import psutil as ps
 
 import pypbo.perf as perf
 
@@ -97,8 +98,8 @@ def pbo(M, S, metric_func, threshold,
                          .format(S))
 
     n_jobs = int(n_jobs)
-    if n_jobs < 1:
-        n_jobs = 1
+    if n_jobs < 0:
+        n_jobs = max(1, ps.cpu_count(logical=False))
 
     if isinstance(M, pd.DataFrame):
         # conver to numpy values
