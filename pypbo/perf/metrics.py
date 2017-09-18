@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 
 import scipy.stats as ss
 import statsmodels.tsa.stattools as sts
@@ -262,10 +263,14 @@ def sharpe_iid_adjusted(rtns, bench=0, factor=1, log=True):
     https://www.google.co.uk/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&cad=rja&uact=8&ved=0ahUKEwi42ZKgg_TOAhVFbhQKHSXPDY0QFggcMAA&url=http%3A%2F%2Fwww.icmacentre.ac.uk%2Fpdf%2Fdiscussion%2FDP2006-10.pdf&usg=AFQjCNF9axYf4Gbz4TVdJUdM8o2M2rz-jg&sig2=pXHZ7M-n-PtNd2d29xhRBw
 
     Parameters:
-        rtns: returns dataframe. Default should be log returns
-        bench: benchmark return
-        factor: time aggregation factor, default 1, i.e. not adjusted.
+        rtns:
+            returns dataframe. Default should be log returns
+        bench:
+            benchmark return
+        factor:
+            time aggregation factor, default 1, i.e. not adjusted.
         log (bool, optional):
+            log return or not, default True
 
     Deleted Parameters:
         return_type: {'log', 'pct'}, return series type, log or arithmetic
@@ -295,9 +300,12 @@ def adjusted_sharpe(sr, skew, excess_kurtosis):
     https://www.google.co.uk/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&cad=rja&uact=8&ved=0ahUKEwi42ZKgg_TOAhVFbhQKHSXPDY0QFggcMAA&url=http%3A%2F%2Fwww.icmacentre.ac.uk%2Fpdf%2Fdiscussion%2FDP2006-10.pdf&usg=AFQjCNF9axYf4Gbz4TVdJUdM8o2M2rz-jg&sig2=pXHZ7M-n-PtNd2d29xhRBw
 
     Parameters:
-        sr : sharpe ratio
-        skew : return series skew
-        excess_kurtosis : return series excess kurtosis
+        sr :
+            sharpe ratio
+        skew :
+            return series skew
+        excess_kurtosis :
+            return series excess kurtosis
     '''
     # return sr * (1 + (skew / 6.0) * sr + (kurtosis - 3) / 24.0 * sr**2)
     return sr * (1 + (skew / 6.0) * sr + excess_kurtosis / 24.0 * sr**2)
@@ -311,15 +319,21 @@ def sharpe_non_iid(rtns, bench=0, q=trading_days, p_critical=.05,
     Andrew Lo (2002).
 
     Parameters:
-        rtns: return series
-        bench: risk free rate, default 0
-        q: time aggregation frequency, e.g. 12 for monthly to annual.
+        rtns:
+            return series
+        bench:
+            risk free rate, default 0
+        q:
+            time aggregation frequency, e.g. 12 for monthly to annual.
             Default 252.
-        p_critical: critical p-value to reject Ljung-Box Null, default 0.05.
-        log (bool, optional): True if rtns is log returns, default True
+        p_critical:
+            critical p-value to reject Ljung-Box Null, default 0.05.
+        log (bool, optional):
+            True if rtns is log returns, default True
 
     Deleted Parameters:
-        return_type: {'log', 'pct'}, return series type, log or arithmetic
+        return_type:
+            {'log', 'pct'}, return series type, log or arithmetic
             percentages.
 
     Returns:
@@ -369,9 +383,11 @@ def sharpe_autocorr_factor(returns, q):
     https://www.google.co.uk/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&cad=rja&uact=8&ved=0ahUKEwj5wf2OjO_OAhWDNxQKHT0wB3EQFggeMAA&url=http%3A%2F%2Fedge-fund.com%2FLo02.pdf&usg=AFQjCNHbSz0LDZxFXm6pmBQukCfAYd0K7w&sig2=zQgZAN22RQcQatyP68VKmQ
 
     Parameters:
-        returns : return sereis
-        q : time aggregation factor, e.g. 12 for monthly to annual,
-        252 for daily to annual
+        returns :
+            return sereis
+        q :
+            time aggregation factor, e.g. 12 for monthly to annual,
+            252 for daily to annual
 
     Returns:
         factor : time aggregation factor
@@ -391,9 +407,12 @@ def annual_geometric_returns(rtns, ann_factor=trading_days, log=True):
     Take a return series and produce annualized geometric return.
 
     Args:
-        rtns (TYPE): return series, log or pct returns
-        ann_factor (TYPE, optional): annual day count factor
-        log (bool, optional): True if log return is given. Default True.
+        rtns (TYPE):
+            return series, log or pct returns
+        ann_factor (TYPE, optional):
+            annual day count factor
+        log (bool, optional):
+            True if log return is given. Default True.
 
     Returns:
         float, annualized geometric return
@@ -408,10 +427,13 @@ def annual_geometric_returns(rtns, ann_factor=trading_days, log=True):
 def annualized_pct_return(total_return, days, ann_factor=trading_days):
     '''
     Parameters:
-        total_return: total pct equity curve, e.g. if return is +50%, then this
+        total_return:
+            total pct equity curve, e.g. if return is +50%, then this
             should be 1.5 (e.g. 1. + .5)
-        days : number of days in period.
-        ann_factor : number of days in a year
+        days :
+            number of days in period.
+        ann_factor :
+            number of days in a year
     Returns:
         Annualized percentage return.
     '''
@@ -423,10 +445,13 @@ def annualized_pct_return(total_return, days, ann_factor=trading_days):
 def annualized_log_return(total_return, days, ann_factor=trading_days):
     '''
     Parameters:
-        total_return: total log return, e.g. if return is +50%, then this
-            should be 0.5, e.g. not 1.5.
-        days : number of days in period.
-        ann_factor : number of days in a year
+        total_return:
+            total log return, e.g. if return is +50%, then this should be 0.5,
+            e.g. not 1.5.
+        days :
+            number of days in period.
+        ann_factor :
+            number of days in a year
     Returns:
         Annualized percentage return.
     '''
@@ -444,8 +469,7 @@ def tail_ratio(returns, tail_prob=5):
     Parameters
     ----------
     returns : pd.Series
-        Daily returns of the strategy, noncumulative.
-         - See full explanation in tears.create_full_tear_sheet.
+        asset returns
     Returns
     -------
     float
@@ -474,7 +498,8 @@ def drawdown(equity):
     Drawdown curve.
 
     Args:
-        equity (DataFrame or Series/Array like): equity curve
+        equity (DataFrame or Series/Array like):
+            equity curve
 
     Returns:
         drawdown curve in percentage terms from peaks.
@@ -491,8 +516,10 @@ def drawdown_from_rtns(returns, log=True):
     Drowdown curve from returns.
 
     Args:
-        returns (array like): asset returns
-        log (bool, optional): log returns or not. Default True
+        returns (array like):
+            asset returns
+        log (bool, optional):
+            log returns or not. Default True
 
     Returns:
         TYPE
