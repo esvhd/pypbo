@@ -539,7 +539,8 @@ def calmar_ratio(returns, factor=trading_days, log=True):
     See Wikipedia: https://en.wikipedia.org/wiki/Calmar_ratio
 
     Parameters:
-        returns : return series
+        returns :
+            return series
     Returns:
         Calmar ratio, calculated with normal percentage returns.
     '''

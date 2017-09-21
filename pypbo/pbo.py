@@ -365,10 +365,13 @@ def psr_from_returns(returns, risk_free=0, target_sharpe=0):
     PSR from return series.
 
     Parameters:
-        returns - return series
-        risk_free - risk free or benchmark rate for sharpe ratio calculation,
-        default 0.
-        target_sharpe - minimum sharpe ratio
+        returns:
+            return series
+        risk_free:
+            risk free or benchmark rate for sharpe ratio calculation,
+            default 0.
+        target_sharpe:
+            minimum sharpe ratio
 
     Returns:
         PSR probabilities.
@@ -392,11 +395,16 @@ def psr(sharpe, T, skew, kurtosis, target_sharpe=0):
     Probabilistic Sharpe Ratio.
 
     Parameters:
-        sharpe - observed sharpe ratio, in same frequency as T.
-        T - no. of observations, should match return / sharpe sampling period.
-        skew - sharpe ratio skew
-        kurtosis - sharpe ratio kurtosis
-        target_sharpe - target sharpe ratio
+        sharpe:
+            observed sharpe ratio, in same frequency as T.
+        T:
+            no. of observations, should match return / sharpe sampling period.
+        skew:
+            sharpe ratio skew
+        kurtosis:
+            sharpe ratio kurtosis
+        target_sharpe:
+            target sharpe ratio
 
     Returns:
         Cumulative probabilities for observed sharpe ratios under standard
@@ -415,13 +423,18 @@ def dsr(test_sharpe, sharpe_std, N, T, skew, kurtosis):
     See paper for definition of SR_0. http://ssrn.com/abstract=2460551
 
     Parameters:
-        test_sharpe : reported sharpe, to be tested.
-        sharpe_std : standard deviation of sharpe ratios from N
-        trials / configurations
-        N : number of backtest configurations
-        T : number of observations
-        skew : skew of returns
-        kurtosis : kurtosis of returns
+        test_sharpe :
+            reported sharpe, to be tested.
+        sharpe_std :
+            standard deviation of sharpe ratios from N trials / configurations
+        N :
+            number of backtest configurations
+        T :
+            number of observations
+        skew :
+            skew of returns
+        kurtosis :
+            kurtosis of returns
 
     Returns:
         DSR statistic
@@ -439,9 +452,12 @@ def dsr_from_returns(test_sharpe, returns_df, risk_free=0):
     Calculate DSR based on a set of given returns_df.
 
     Parameters:
-        test_sharpe : Reported sharpe, to be tested.
-        returns_df : Log return series
-        risk_free : Risk free return, default 0.
+        test_sharpe :
+            Reported sharpe, to be tested.
+        returns_df :
+            Log return series
+        risk_free :
+            Risk free return, default 0.
     Returns:
         DSR statistic
     '''
@@ -476,11 +492,16 @@ def minTRL(sharpe, skew, kurtosis, target_sharpe=0, prob=.95):
     Minimum Track Record Length.
 
     Parameters:
-        sharpe : observed sharpe ratio, in same frequency as observations.
-        skew : sharpe ratio skew
-        kurtosis : sharpe ratio kurtosis
-        target_sharpe : target sharpe ratio
-        prob : minimum probability for estimating TRL.
+        sharpe :
+            observed sharpe ratio, in same frequency as observations.
+        skew :
+            sharpe ratio skew
+        kurtosis :
+            sharpe ratio kurtosis
+        target_sharpe :
+            target sharpe ratio
+        prob :
+            minimum probability for estimating TRL.
 
     Returns:
         minTRL, in terms of number of observations.
@@ -510,12 +531,16 @@ def minBTL(N, sharpe_IS):
     measure of backtest overfitting.
 
     Paramters:
-        N : number of backtest configurations
-        sharpe_IS : In-Sample observed Sharpe ratio
+        N :
+            number of backtest configurations
+        sharpe_IS :
+            In-Sample observed Sharpe ratio
 
     Returns:
-        btl : minimum back test length
-        upper_bound : upper bound for minBTL
+        btl :
+            minimum back test length
+        upper_bound :
+            upper bound for minBTL
     '''
     exp_max = expected_max(N)
 
@@ -525,6 +550,3 @@ def minBTL(N, sharpe_IS):
 
     return (btl, upper_bound)
 
-
-if __name__ == 'main':
-    pass
