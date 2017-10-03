@@ -16,6 +16,23 @@ import warnings
 trading_days = 252
 
 
+def log_excess(rtns, bench):
+    '''
+    Calculate excess return given two log return series.
+
+    Args:
+        rtns (TYPE): log returns
+        bench (TYPE): benchmark log returns
+
+    Returns:
+        Log excess returns
+    '''
+    # convert to pct space then back to log
+    x = np.exp(rtns) - np.exp(bench)
+    excess = np.log(1 + x)
+    return excess
+
+
 def returns_gmean(returns):
     '''
     Calculates geometric average returns from a given returns series.
@@ -62,14 +79,13 @@ def maxzero(x):
 
 
 def LPM(returns, target_rtn, moment):
+    excess = log_excess(target_rtn, returns)
     if isinstance(returns, pd.DataFrame) or isinstance(returns, pd.Series):
-        adj_returns = (target_rtn - returns).apply(maxzero)
+        # adj_returns = (target_rtn - returns).apply(maxzero)
+        adj_returns = excess.clip(lower=0)
         return np.power(adj_returns, moment).mean()
     else:
-        adj_returns = np.ndarray.clip(target_rtn - returns, min=0)
-        # only averaging over non nan values
-        # return np.nansum(np.power(adj_returns, moment)) / \
-        #     np.count_nonzero(~np.isnan(adj_returns))
+        adj_returns = np.ndarray.clip(excess, min=0)
         return np.nanmean(np.power(adj_returns, moment), axis=0)
 
 
@@ -81,7 +97,7 @@ def kappa(returns, target_rtn, moment, log=True):
     # validate_return_type(return_type)
 
     if log:
-        excess = returns - target_rtn
+        excess = log_excess(returns, target_rtn)
     else:
         # mean = returns_gmean(returns)
         excess = pct_to_log_return(returns - target_rtn)
@@ -158,13 +174,18 @@ def sortino(returns, target_rtn=0, factor=1, log=True):
     # validate_return_type(return_type)
 
     if not log:
+        excess = pct_to_log_return(returns - target_rtn)
         returns = pct_to_log_return(returns)
+    else:
+        excess = log_excess(returns, target_rtn)
 
     if isinstance(returns, pd.DataFrame) or isinstance(returns, pd.Series):
-        return (returns.mean() - target_rtn) / \
+        # return (returns.mean() - target_rtn) / \
+        return excess.mean() / \
             np.sqrt(LPM(returns, target_rtn, 2)) * np.sqrt(factor)
     else:
-        return np.nanmean(returns - target_rtn) / \
+        # return np.nanmean(returns - target_rtn) / \
+        return np.nanmean(excess) / \
             np.sqrt(LPM(returns, target_rtn, 2)) * np.sqrt(factor)
 
 
@@ -175,10 +196,9 @@ def sortino_iid(rtns, bench=0, factor=1, log=True):
         rtns = pd.DataFrame(rtns)
 
     if log:
-        excess = rtns - bench
+        excess = log_excess(rtns, bench)
     else:
         excess = pct_to_log_return(rtns - bench)
-        # excess = returns_gmean(rtns) - bench
 
     neg_rtns = excess.where(cond=lambda x: x < 0)
     neg_rtns.fillna(0, inplace=True)
@@ -218,22 +238,16 @@ def sortino_iid(rtns, bench=0, factor=1, log=True):
 def sharpe_iid(rtns, bench=0, factor=1, log=True):
     # validate_return_type(return_type)
 
-    excess = rtns - bench
+    if log:
+        excess = log_excess(rtns, bench)
     if not log:
-        excess = pct_to_log_return(excess)
+        excess = pct_to_log_return(rtns - bench)
 
     if isinstance(rtns, pd.DataFrame) or isinstance(rtns, pd.Series):
-        # return np.sqrt(factor) * excess.mean() / excess.std(ddof=1)
-        # if return_type == 'pct':
-        #     excess_mean = returns_gmean(excess)
-        # else:
         excess_mean = excess.mean()
         return np.sqrt(factor) * excess_mean / excess.std(ddof=1)
     else:
         # numpy way
-        # if return_type == 'pct':
-        #     excess_mean = returns_gmean(excess)
-        # else:
         excess_mean = np.nanmean(excess, axis=0)
         return np.sqrt(factor) * excess_mean / np.nanstd(excess,
                                                          axis=0, ddof=1)
@@ -246,7 +260,7 @@ def sharpe_iid_rolling(rtns, window, bench=0, factor=1, log=True):
     # validate_return_type(return_type)
 
     if log:
-        excess = rtns - bench
+        excess = log_excess(rtns, bench)
     else:
         excess = pct_to_log_return(rtns - bench)
 
