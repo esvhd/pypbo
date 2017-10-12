@@ -28,7 +28,7 @@ def log_excess(rtns, bench):
         Log excess returns
     '''
     # convert to pct space then back to log
-    x = np.exp(rtns) - np.exp(bench)
+    x = np.exp(rtns).sub(np.exp(bench), axis='index')
     excess = np.log(1 + x)
     return excess
 
