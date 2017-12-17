@@ -28,7 +28,10 @@ def log_excess(rtns, bench):
         Log excess returns
     '''
     # convert to pct space then back to log
-    x = np.exp(rtns).sub(np.exp(bench), axis='index')
+    if isinstance(rtns, pd.Series) or isinstance(rtns, pd.DataFrame):
+        x = np.exp(rtns).sub(np.exp(bench), axis='index')
+    else:
+        x = np.exp(rtns) - np.exp(bench)
     excess = np.log(1 + x)
     return excess
 
