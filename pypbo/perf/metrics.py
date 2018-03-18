@@ -238,13 +238,36 @@ def sortino_iid(rtns, bench=0, factor=1, log=True):
 #         return np.nanmean(excess) / np.nanstd(excess, ddof=1)
 
 
+def match_rtn_dates(rtns, bench):
+    if not (isinstance(rtns, pd.Series) or isinstance(rtns, pd.DataFrame)):
+        # no need to reindex
+        return bench
+
+    if isinstance(bench, pd.Series) or isinstance(bench, pd.DataFrame):
+        bench = bench.reindex(rtns.index)
+        # check
+        expected = len(rtns)
+        check = bench.count()
+        if expected != check:
+            # warning
+            warnings.warn('Returns and benchmark length not matching, '
+                          '{} vs {}'.format(expected, check))
+        return bench
+    else:
+        return bench
+
+
 def sharpe_iid(rtns, bench=0, factor=1, log=True):
     # validate_return_type(return_type)
+
+    bench = match_rtn_dates(rtns, bench)
 
     if log:
         excess = log_excess(rtns, bench)
     if not log:
         excess = pct_to_log_return(rtns - bench)
+
+    # print('excess: ', excess)
 
     if isinstance(rtns, pd.DataFrame) or isinstance(rtns, pd.Series):
         excess_mean = excess.mean()
@@ -297,6 +320,7 @@ def sharpe_iid_adjusted(rtns, bench=0, factor=1, log=True):
         TYPE
     '''
     sr = sharpe_iid(rtns, bench=bench, factor=1, log=log)
+    # print(sr)
 
     if isinstance(rtns, pd.DataFrame) or isinstance(rtns, pd.Series):
         skew = rtns.skew()
