@@ -507,10 +507,14 @@ def tail_ratio(returns, tail_prob=5):
     Determines the ratio between the right (95%) and left tail (5%).
     For example, a ratio of 0.25 means that losses are four times
     as bad as profits.
+
     Parameters
     ----------
     returns : pd.Series
         asset returns
+    tail_prob : int, optional
+        in the range of [0, 100], to match numpy.nanpercentile()
+
     Returns
     -------
     float
