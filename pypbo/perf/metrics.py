@@ -16,7 +16,37 @@ import warnings
 trading_days = 252
 
 
-def log_excess(rtns, bench):
+def _is_pandas(d):
+    return isinstance(d, pd.DataFrame) or isinstance(d, pd.Series)
+
+
+def _reindex_dates(source, target):
+    """
+    Reindex source data with target's index
+
+    Parameters
+    ----------
+    source : TYPE
+        data to reindex
+    target : TYPE
+        target data
+
+    Returns
+    -------
+    TYPE
+    """
+    if _is_pandas(source) and _is_pandas(target):
+        result = source.reindex(target.index)
+    else:
+        result = source
+    # assert no NaN
+    nan_flag = np.isnan(result)
+    nan_check = nan_flag.sum()
+    assert(nan_check == 0), 'Unmatched dates, NaN #{}'.format(nan_check)
+    return result
+
+
+def log_excess(rtns, bench, debug=True):
     '''
     Calculate excess return given two log return series.
 
@@ -28,12 +58,48 @@ def log_excess(rtns, bench):
         Log excess returns
     '''
     # convert to pct space then back to log
-    if isinstance(rtns, pd.Series) or isinstance(rtns, pd.DataFrame):
-        x = np.exp(rtns).sub(np.exp(bench), axis='index')
-    else:
-        x = np.exp(rtns) - np.exp(bench)
-    excess = np.log(1 + x)
+    # if isinstance(rtns, pd.Series) or isinstance(rtns, pd.DataFrame):
+    #     x = np.exp(rtns).sub(np.exp(bench), axis='index')
+    # else:
+    #     x = np.exp(rtns) - np.exp(bench)
+    # y = 1 + x
+
+    # if debug:
+    #     valid_log = y > 0
+    #     invalid_log = len(y) - np.sum(valid_log)
+    #     debug_test = np.allclose(invalid_log, 0)
+    #     # uncomment below to print count
+    #     # print('log_excess debug: less than or close to 0 total = ',
+    #     #       invalid_log)
+
+    #     assert(debug_test), 'Log(0 or -ve) count = {}'.format(invalid_log)
+
+    # excess = np.log(y)
+
+    # first match return dates
+    matched_bench = _reindex_dates(bench, rtns)
+    excess = rtns - matched_bench
     return excess
+
+
+def pct_to_log_excess(returns, bench):
+    """
+    Convert percentage returns to log returns, then compute log excess.
+
+    Parameters
+    ----------
+    returns : TYPE
+
+    bench : TYPE
+
+
+    Returns
+    -------
+    TYPE
+    """
+    rtns_log = pct_to_log_return(returns)
+    bench_log = pct_to_log_return(bench)
+    return log_excess(returns, bench)
 
 
 def returns_gmean(returns):
@@ -48,10 +114,31 @@ def returns_gmean(returns):
 
 
 def log_returns(prices, n=1, fillna=False):
+    """
+    Log returns from prices.
+
+    Parameters
+    ----------
+    prices : TYPE
+
+    n : int, optional
+
+    fillna : bool, optional
+        If True fill first nan with 0.
+
+    Returns
+    -------
+    TYPE
+    """
     # not filling NAs
     rtns = np.log(prices) - np.log(prices.shift(n))
     if fillna:
-        rtns.fillna(0, inplace=True)
+        # rtns.fillna(0, inplace=True)
+        # only fill first period nan
+        if _is_pandas(rtns):
+            rtns.values[0] = 0.
+        else:
+            rtns[0] = 0.
     return rtns
 
 
@@ -82,7 +169,7 @@ def maxzero(x):
 
 
 def LPM(returns, target_rtn, moment):
-    excess = log_excess(target_rtn, returns)
+    excess = log_excess(returns, target_rtn)
     if isinstance(returns, pd.DataFrame) or isinstance(returns, pd.Series):
         # adj_returns = (target_rtn - returns).apply(maxzero)
         adj_returns = excess.clip(lower=0)
@@ -103,7 +190,8 @@ def kappa(returns, target_rtn, moment, log=True):
         excess = log_excess(returns, target_rtn)
     else:
         # mean = returns_gmean(returns)
-        excess = pct_to_log_return(returns - target_rtn)
+        # convert to log return then to log excess
+        excess = pct_to_log_excess(returns, target_rtns)
 
     if isinstance(excess, pd.DataFrame) or isinstance(excess, pd.Series):
         mean = excess.mean()
@@ -177,7 +265,7 @@ def sortino(returns, target_rtn=0, factor=1, log=True):
     # validate_return_type(return_type)
 
     if not log:
-        excess = pct_to_log_return(returns - target_rtn)
+        excess = pct_to_log_excess(returns, target_rtn)
         returns = pct_to_log_return(returns)
     else:
         excess = log_excess(returns, target_rtn)
@@ -201,7 +289,7 @@ def sortino_iid(rtns, bench=0, factor=1, log=True):
     if log:
         excess = log_excess(rtns, bench)
     else:
-        excess = pct_to_log_return(rtns - bench)
+        excess = pct_to_log_excess(returns, target_rtn)
 
     neg_rtns = excess.where(cond=lambda x: x < 0)
     neg_rtns.fillna(0, inplace=True)
@@ -260,12 +348,12 @@ def match_rtn_dates(rtns, bench):
 def sharpe_iid(rtns, bench=0, factor=1, log=True):
     # validate_return_type(return_type)
 
-    bench = match_rtn_dates(rtns, bench)
+    # bench = match_rtn_dates(rtns, bench)
 
     if log:
         excess = log_excess(rtns, bench)
     if not log:
-        excess = pct_to_log_return(rtns - bench)
+        excess = pct_to_log_excess(rtns, bench)
 
     # print('excess: ', excess)
 
@@ -288,7 +376,7 @@ def sharpe_iid_rolling(rtns, window, bench=0, factor=1, log=True):
     if log:
         excess = log_excess(rtns, bench)
     else:
-        excess = pct_to_log_return(rtns - bench)
+        excess = pct_to_log_excess(rtns, bench)
 
     roll = excess.rolling(window=window)
     return np.sqrt(factor) * roll.mean() / roll.std(ddof=1)
