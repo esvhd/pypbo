@@ -29,6 +29,25 @@ def test_log_returns():
     assert(np.allclose(tests - reconstruct, 0.))
 
 
+def test_log_returns_na():
+    test_data = pd.DataFrame([[1, 2, 3],
+                              [1.2, 2.2, 3.2],
+                              [1.1, np.nan, 2.4],
+                              [1, 2.42, 3.4]])
+    print(test_data)
+    log_rtns = perf.log_returns(test_data, n=1, fillna=False)
+    expects_true = log_rtns.isnull().iloc[2, 1]
+
+    print(f'test value = {expects_true}')
+    assert(expects_true)
+
+    print(log_rtns)
+    expected_val = np.log(2.42) - np.log(2.2)
+    print(f'expected value = {expected_val}')
+    assert(np.isclose(log_rtns.iloc[3, 1],
+                      expected_val))
+
+
 def test_pct_to_log_return():
     np.random.seed(7)
     tests = pd.Series([1 + np.random.rand() for _ in range(100)])
@@ -57,28 +76,32 @@ def test_sharpe_iid():
                      .526])
 
     # numpy array
-    sharpe = perf.sharpe_iid(data, bench=.05, factor=1, return_type='log')
+    sharpe = perf.sharpe_iid(data, bench=.05, factor=1, log=True)
 
     assert(np.isclose(sharpe, .834364))
 
-    sharpe = perf.sharpe_iid(data, bench=.05, factor=1, return_type='pct')
+    sharpe = perf.sharpe_iid(data, bench=.05, factor=1, log=False)
 
-    assert(np.isclose(sharpe, 0.8189144744629443))
+    assert(np.isclose(sharpe, .834364))
+    # below is for computing sharpe ratio with pct returns
+    # assert(np.isclose(sharpe, 0.8189144744629443))
 
     # turn data to pandas.Series
     data = pd.Series(data)
 
-    sharpe = perf.sharpe_iid(data, bench=.05, factor=1, return_type='log')
+    sharpe = perf.sharpe_iid(data, bench=.05, factor=1, log=True)
 
     assert(np.isclose(sharpe, .834364))
 
-    sharpe = perf.sharpe_iid(data, bench=.05, factor=252, return_type='log')
+    sharpe = perf.sharpe_iid(data, bench=.05, factor=252, log=True)
 
     assert(np.isclose(sharpe, .834364 * np.sqrt(252)))
 
-    sharpe = perf.sharpe_iid(data, bench=.05, factor=1, return_type='pct')
+    sharpe = perf.sharpe_iid(data, bench=.05, factor=1, log=False)
 
-    assert(np.isclose(sharpe, 0.8189144744629443))
+    assert(np.isclose(sharpe, .834364))
+    # below is for computing sharpe ratio with pct returns
+    # assert(np.isclose(sharpe, 0.8189144744629443))
 
 
 def test_sortino_iid():
@@ -94,23 +117,23 @@ def test_sortino_iid():
                      .13,
                      -.04])
 
-    ratio = perf.sortino_iid(data, bench=0, factor=1, return_type='log')
+    ratio = perf.sortino_iid(data, bench=0, factor=1, log=True)
     print(ratio)
     assert(np.isclose(ratio, 4.417261))
 
-    ratio = perf.sortino(data, target_rtn=0, factor=1, return_type='log')
+    ratio = perf.sortino(data, target_rtn=0, factor=1, log=True)
     assert(np.isclose(ratio, 4.417261))
 
     data = pd.DataFrame(data)
-    ratio = perf.sortino_iid(data, bench=0, factor=1, return_type='log')
+    ratio = perf.sortino_iid(data, bench=0, factor=1, log=True)
     print(ratio)
     assert(np.isclose(ratio, 4.417261))
 
-    ratio = perf.sortino_iid(data, bench=0, factor=252, return_type='log')
+    ratio = perf.sortino_iid(data, bench=0, factor=252, log=True)
     print(ratio)
     assert(np.isclose(ratio, 4.417261 * np.sqrt(252)))
 
-    ratio = perf.sortino(data, target_rtn=0, factor=1, return_type='log')
+    ratio = perf.sortino(data, target_rtn=0, factor=1, log=True)
     assert(np.isclose(ratio, 4.417261))
 
 
@@ -135,14 +158,14 @@ def test_omega():
                      -.01])
     mar = .01
 
-    omega = perf.omega(data, target_rtn=mar, return_type='log')
+    omega = perf.omega(data, target_rtn=mar, log=True)
 
     assert(np.isclose(omega, .463901689))
 
     # DataFrame version.
     df = pd.DataFrame(data)
 
-    omega = perf.omega(df, target_rtn=mar, return_type='log')
+    omega = perf.omega(df, target_rtn=mar, log=True)
 
     assert(np.isclose(omega, .463901689))
 

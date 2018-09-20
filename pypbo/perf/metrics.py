@@ -130,8 +130,16 @@ def log_returns(prices, n=1, fillna=False):
     -------
     TYPE
     """
-    # not filling NAs
+    # keep null masks
+    mask = prices.isnull()
+
+    # ffill prices for calculating returns, one way to handle holiday calendars
+    # the ffilled cells will be reset back to nan using the mask saved above.
+    prices = prices.ffill()
     rtns = np.log(prices) - np.log(prices.shift(n))
+    rtns.values[mask.values] = np.nan
+    # print(rtns)
+
     if fillna:
         # rtns.fillna(0, inplace=True)
         # only fill first period nan
@@ -143,8 +151,7 @@ def log_returns(prices, n=1, fillna=False):
 
 
 def pct_to_log_return(pct_returns):
-    if isinstance(pct_returns, pd.DataFrame) or \
-            isinstance(pct_returns, pd.Series):
+    if _is_pandas(pct_returns):
         return np.log(1 + pct_returns.fillna(0))
     else:
         return np.log(1 + np.nan_to_num(pct_returns))
@@ -169,8 +176,24 @@ def maxzero(x):
 
 
 def LPM(returns, target_rtn, moment):
-    excess = log_excess(returns, target_rtn)
-    if isinstance(returns, pd.DataFrame) or isinstance(returns, pd.Series):
+    """
+    Lower partial moment.
+
+    Parameters
+    ----------
+    returns : TYPE
+        log returns
+    target_rtn : TYPE
+
+    moment : TYPE
+
+
+    Returns
+    -------
+    TYPE
+    """
+    excess = -log_excess(returns, target_rtn)
+    if _is_pandas(returns):
         # adj_returns = (target_rtn - returns).apply(maxzero)
         adj_returns = excess.clip(lower=0)
         return np.power(adj_returns, moment).mean()
@@ -192,8 +215,10 @@ def kappa(returns, target_rtn, moment, log=True):
         # mean = returns_gmean(returns)
         # convert to log return then to log excess
         excess = pct_to_log_excess(returns, target_rtns)
+        returns = pct_to_log_return(returns)
+        target_rtn = pct_to_log_return(target_rtn)
 
-    if isinstance(excess, pd.DataFrame) or isinstance(excess, pd.Series):
+    if _is_pandas(excess):
         mean = excess.mean()
     else:
         mean = np.nanmean(excess)
@@ -270,7 +295,7 @@ def sortino(returns, target_rtn=0, factor=1, log=True):
     else:
         excess = log_excess(returns, target_rtn)
 
-    if isinstance(returns, pd.DataFrame) or isinstance(returns, pd.Series):
+    if _is_pandas(returns):
         # return (returns.mean() - target_rtn) / \
         return excess.mean() / \
             np.sqrt(LPM(returns, target_rtn, 2)) * np.sqrt(factor)
@@ -331,7 +356,7 @@ def match_rtn_dates(rtns, bench):
         # no need to reindex
         return bench
 
-    if isinstance(bench, pd.Series) or isinstance(bench, pd.DataFrame):
+    if _is_pandas(bench):
         bench = bench.reindex(rtns.index)
         # check
         expected = len(rtns)
@@ -346,9 +371,23 @@ def match_rtn_dates(rtns, bench):
 
 
 def sharpe_iid(rtns, bench=0, factor=1, log=True):
-    # validate_return_type(return_type)
+    """IID Sharpe ratio, percent returns are converted to log return.
 
-    # bench = match_rtn_dates(rtns, bench)
+    Parameters
+    ----------
+    rtns : TYPE
+
+    bench : int, optional
+
+    factor : int, optional
+
+    log : bool, optional
+
+
+    Returns
+    -------
+    TYPE
+    """
 
     if log:
         excess = log_excess(rtns, bench)
@@ -357,7 +396,7 @@ def sharpe_iid(rtns, bench=0, factor=1, log=True):
 
     # print('excess: ', excess)
 
-    if isinstance(rtns, pd.DataFrame) or isinstance(rtns, pd.Series):
+    if _is_pandas(rtns):
         excess_mean = excess.mean()
         return np.sqrt(factor) * excess_mean / excess.std(ddof=1)
     else:
@@ -410,7 +449,7 @@ def sharpe_iid_adjusted(rtns, bench=0, factor=1, log=True):
     sr = sharpe_iid(rtns, bench=bench, factor=1, log=log)
     # print(sr)
 
-    if isinstance(rtns, pd.DataFrame) or isinstance(rtns, pd.Series):
+    if _is_pandas(rtns):
         skew = rtns.skew()
         excess_kurt = rtns.kurtosis()
     else:
@@ -486,7 +525,7 @@ def sharpe_non_iid(rtns, bench=0, q=trading_days, p_critical=.05,
 
     sr = sharpe_iid(rtns, bench=bench, factor=1, log=log)
 
-    if not isinstance(rtns, pd.DataFrame):
+    if not _is_pandas(rtns):
         adj_factor, pval = sharpe_autocorr_factor(rtns, q=q)
         if pval < p_critical:
             # reject Ljung-Box Null, there is serial correlation
@@ -608,7 +647,7 @@ def tail_ratio(returns, tail_prob=5):
     float
         tail_prob ratio
     '''
-    if isinstance(returns, pd.Series) or isinstance(returns, pd.DataFrame):
+    if _is_pandas(returns):
         tail_prob /= 100.
         top = returns.quantile(q=1 - tail_prob)
         bottom = returns.quantile(q=tail_prob)
