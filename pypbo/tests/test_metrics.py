@@ -7,6 +7,8 @@ import pypbo.perf as perf
 
 
 # TODO test scripts
+# e.g.: pytest -s test_metrics.py
+# -s swtich to allow printing to stdio
 
 
 def test_log_returns():
