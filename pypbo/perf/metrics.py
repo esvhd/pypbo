@@ -736,7 +736,3 @@ def calmar_ratio(returns, factor=trading_days, log=True):
     max_dd = np.abs(drawdown(cum_return).min())
 
     return annual_return / max_dd
-
-
-if __name__ == 'main':
-    pass
