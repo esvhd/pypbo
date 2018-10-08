@@ -533,13 +533,21 @@ def sharpe_non_iid(rtns, bench=0, q=trading_days, p_critical=.05,
         else:
             return sr * np.sqrt(q)
     else:
-        tests = [sharpe_autocorr_factor(rtns[col].dropna().values, q=q)
-                 for col in rtns.columns]
+        if isinstance(rtns, pd.Series):
+            tests = [sharpe_autocorr_factor(rtns.dropna().values, q=q)]
+        else:
+            tests = [sharpe_autocorr_factor(rtns[col].dropna().values, q=q)
+                     for col in rtns.columns]
         factors = [adj_factor if pval < p_critical else np.sqrt(q)
                    for adj_factor, pval in tests]
-        res = pd.Series(factors, index=rtns.columns)
 
-        return res.multiply(sr)
+        if isinstance(rtns, pd.Series):
+            out = sr * factors[0]
+        else:
+            res = pd.Series(factors, index=rtns.columns)
+            out = res.multiply(sr)
+
+        return out
 
 
 def sharpe_autocorr_factor(returns, q):
