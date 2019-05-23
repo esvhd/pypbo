@@ -4,7 +4,8 @@ import matplotlib.pyplot as plt
 
 import scipy.stats as ss
 import statsmodels.tsa.stattools as sts
-import statsmodels.tools.tools as stt
+# import statsmodels.tools.tools as stt
+import statsmodels.distributions.empirical_distribution as sde
 # import statsmodels.stats.diagnostic as ssd
 
 import warnings
@@ -115,7 +116,9 @@ def returns_gmean(returns):
 
 def log_returns(prices, n=1, fillna=False):
     """
-    Log returns from prices.
+    Log returns from prices. Preserves existing nan data when holidays are
+    not aligned, i.e. return for date after an nan observation is done versus
+    the last non-nan date.
 
     Parameters
     ----------
@@ -214,7 +217,7 @@ def kappa(returns, target_rtn, moment, log=True):
     else:
         # mean = returns_gmean(returns)
         # convert to log return then to log excess
-        excess = pct_to_log_excess(returns, target_rtns)
+        excess = pct_to_log_excess(returns, target_rtn)
         returns = pct_to_log_return(returns)
         target_rtn = pct_to_log_return(target_rtn)
 
@@ -256,7 +259,7 @@ def omega_empirical(returns, target_rtn=0, log=True,
         returns = pct_to_log_return(returns)
 
     # TODO
-    ecdf = stt.ECDF(returns)
+    ecdf = sde.ECDF(returns)
 
     # Generate computation space
     x = np.linspace(start=returns.min(), stop=returns.max(), num=steps)
@@ -314,7 +317,7 @@ def sortino_iid(rtns, bench=0, factor=1, log=True):
     if log:
         excess = log_excess(rtns, bench)
     else:
-        excess = pct_to_log_excess(returns, target_rtn)
+        excess = pct_to_log_excess(rtns, bench)
 
     neg_rtns = excess.where(cond=lambda x: x < 0)
     neg_rtns.fillna(0, inplace=True)
