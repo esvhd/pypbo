@@ -4,6 +4,7 @@ import itertools as itr
 import scipy.stats as ss
 import scipy.special as spec
 import seaborn as sns
+
 # import statsmodels.tools.tools as stt
 import statsmodels.distributions.empirical_distribution as smd
 import matplotlib.pyplot as plt
@@ -15,34 +16,58 @@ import psutil as ps
 import pypbo.perf as perf
 
 
-PBO = cls.namedtuple('PBO',
-                     ['pbo',
-                      'prob_oos_loss',
-                      'linear_model',
-                      'stochastic',
-                      'Cs',
-                      'J', 'J_bar',
-                      'R', 'R_bar',
-                      'R_rank', 'R_bar_rank',
-                      'rn', 'rn_bar',
-                      'w_bar', 'logits',
-                      'R_n_star', 'R_bar_n_star'])
+PBO = cls.namedtuple(
+    "PBO",
+    [
+        "pbo",
+        "prob_oos_loss",
+        "linear_model",
+        "stochastic",
+        "Cs",
+        "J",
+        "J_bar",
+        "R",
+        "R_bar",
+        "R_rank",
+        "R_bar_rank",
+        "rn",
+        "rn_bar",
+        "w_bar",
+        "logits",
+        "R_n_star",
+        "R_bar_n_star",
+    ],
+)
 
 
-PBOCore = cls.namedtuple('PBOCore',
-                         ['J', 'J_bar',
-                          'R', 'R_bar',
-                          'R_rank', 'R_bar_rank',
-                          'rn', 'rn_bar',
-                          'w_bar', 'logits'])
+PBOCore = cls.namedtuple(
+    "PBOCore",
+    [
+        "J",
+        "J_bar",
+        "R",
+        "R_bar",
+        "R_rank",
+        "R_bar_rank",
+        "rn",
+        "rn_bar",
+        "w_bar",
+        "logits",
+    ],
+)
 
 
-def pbo(M, S, metric_func, threshold,
-        n_jobs=1,
-        verbose=False,
-        plot=False,
-        hist=False):
-    '''
+def pbo(
+    M,
+    S,
+    metric_func,
+    threshold,
+    n_jobs=1,
+    verbose=False,
+    plot=False,
+    hist=False,
+):
+    """
     Based on http://papers.ssrn.com/sol3/papers.cfm?abstract_id=2326253
 
     Features:
@@ -93,10 +118,11 @@ def pbo(M, S, metric_func, threshold,
 
     Returns:
     PBO result in namedtuple, instance of PBO.
-    '''
+    """
     if S % 2 == 1:
-        raise ValueError('S must be an even integer, {:.1f} was given'
-                         .format(S))
+        raise ValueError(
+            "S must be an even integer, {:.1f} was given".format(S)
+        )
 
     n_jobs = int(n_jobs)
     if n_jobs < 0:
@@ -105,7 +131,7 @@ def pbo(M, S, metric_func, threshold,
     if isinstance(M, pd.DataFrame):
         # conver to numpy values
         if verbose:
-            print('Convert from DataFrame to numpy array.')
+            print("Convert from DataFrame to numpy array.")
         M = M.values
 
     # Paper suggests T should be 2x the no. of observations used by investor
@@ -120,7 +146,7 @@ def pbo(M, S, metric_func, threshold,
     sub_T = T // S
 
     if verbose:
-        print('Total sample size: {:,d}, chunck size: {:,d}'.format(T, sub_T))
+        print("Total sample size: {:,d}, chunck size: {:,d}".format(T, sub_T))
 
     # generate subsets, each of length sub_T
     Ms = []
@@ -132,12 +158,12 @@ def pbo(M, S, metric_func, threshold,
     Ms_values = np.array(Ms_values)
 
     if verbose:
-        print('No. of Chuncks: {:,d}'.format(len(Ms)))
+        print("No. of Chuncks: {:,d}".format(len(Ms)))
 
     # generate combinations
     Cs = [x for x in itr.combinations(Ms, S // 2)]
     if verbose:
-        print('No. of combinations = {:,d}'.format(len(Cs)))
+        print("No. of combinations = {:,d}".format(len(Cs)))
 
     # Ms_index used to find J_bar (complementary OOS part)
     Ms_index = set([x for x in range(len(Ms))])
@@ -187,11 +213,11 @@ def pbo(M, S, metric_func, threshold,
         # use joblib for parallel calc
         # print('Run in parallel mode.')
         cores = job.Parallel(n_jobs=n_jobs)(
-            job.delayed(pbo_core_calc)(Cs_x,
-                                       Ms, Ms_values, Ms_index,
-                                       metric_func,
-                                       verbose)
-            for Cs_x in Cs)
+            job.delayed(pbo_core_calc)(
+                Cs_x, Ms, Ms_values, Ms_index, metric_func, verbose
+            )
+            for Cs_x in Cs
+        )
         # core_df = pd.DataFrame(cores, columns=PBOCore._fields)
         # convert to values needed.
         # # core_df = pd.DataFrame.from_records(cores)
@@ -219,8 +245,7 @@ def pbo(M, S, metric_func, threshold,
         logits = [c.logits for c in cores]
 
     # prob of overfitting
-    phi = np.array([1.0 if lam <= 0 else 0.0
-                    for lam in logits]) / len(Cs)
+    phi = np.array([1.0 if lam <= 0 else 0.0 for lam in logits]) / len(Cs)
     pbo_test = np.sum(phi)
 
     # performance degradation
@@ -228,38 +253,47 @@ def pbo(M, S, metric_func, threshold,
     R_bar_n_star = np.array([R_bar[i][rn[i]] for i in range(len(R_bar))])
     lm = ss.linregress(x=R_n_star, y=R_bar_n_star)
 
-    prob_oos_loss = np.sum([1.0 if r < threshold else 0.0
-                            for r in R_bar_n_star]) / len(R_bar_n_star)
+    prob_oos_loss = np.sum(
+        [1.0 if r < threshold else 0.0 for r in R_bar_n_star]
+    ) / len(R_bar_n_star)
 
     # Stochastic dominance
-    y = np.linspace(min(R_bar_n_star), max(R_bar_n_star),
-                    endpoint=True, num=1000)
+    y = np.linspace(
+        min(R_bar_n_star), max(R_bar_n_star), endpoint=True, num=1000
+    )
     R_bar_n_star_cdf = smd.ECDF(R_bar_n_star)
     optimized = R_bar_n_star_cdf(y)
 
     R_bar_cdf = smd.ECDF(np.concatenate(R_bar))
     non_optimized = R_bar_cdf(y)
 
-    dom_df = pd.DataFrame(dict(optimized_IS=optimized,
-                               non_optimized_OOS=non_optimized))
+    dom_df = pd.DataFrame(
+        dict(optimized_IS=optimized, non_optimized_OOS=non_optimized)
+    )
     dom_df.index = y
     # visually, non_optimized curve above optimized curve indicates good
     # backtest with low overfitting.
-    dom_df['SD2'] = dom_df.non_optimized_OOS - dom_df.optimized_IS
+    dom_df["SD2"] = dom_df.non_optimized_OOS - dom_df.optimized_IS
 
-    result = PBO(pbo_test,
-                 prob_oos_loss,
-                 lm,
-                 dom_df,
-                 Cs,
-                 J, J_bar,
-                 R, R_bar,
-                 R_rank, R_bar_rank,
-                 rn, rn_bar,
-                 w_bar,
-                 logits,
-                 R_n_star,
-                 R_bar_n_star)
+    result = PBO(
+        pbo_test,
+        prob_oos_loss,
+        lm,
+        dom_df,
+        Cs,
+        J,
+        J_bar,
+        R,
+        R_bar,
+        R_rank,
+        R_bar_rank,
+        rn,
+        rn_bar,
+        w_bar,
+        logits,
+        R_n_star,
+        R_bar_n_star,
+    )
 
     if plot:
         plot_pbo(result, hist=hist)
@@ -267,23 +301,20 @@ def pbo(M, S, metric_func, threshold,
     return result
 
 
-def pbo_core_calc(Cs,
-                  Ms, Ms_values, Ms_index,
-                  metric_func,
-                  verbose=False):
+def pbo_core_calc(Cs, Ms, Ms_values, Ms_index, metric_func, verbose=False):
     # make sure chucks are concatenated in their original order
     order = [x for x, _ in Cs]
     sort_ind = np.argsort(order)
 
     Cs_values = np.array([v for _, v in Cs])
     if verbose:
-        print('Cs index = {}, '.format(order), end='')
+        print("Cs index = {}, ".format(order), end="")
     J_x = np.concatenate(Cs_values[sort_ind, :])
 
     # find Cs_bar
     Cs_bar_index = list(sorted(Ms_index - set(order)))
     if verbose:
-        print('Cs_bar_index = {}'.format(Cs_bar_index))
+        print("Cs_bar_index = {}".format(Cs_bar_index))
     J_bar_x = np.concatenate(Ms_values[Cs_bar_index, :])
 
     R_x = metric_func(J_x)
@@ -298,11 +329,18 @@ def pbo_core_calc(Cs,
     w_bar_x = float(rn_bar_x) / len(R_bar_rank_x)
     logit_x = spec.logit(w_bar_x)
 
-    core = PBOCore(J_x, J_bar_x,
-                   R_x, R_bar_x,
-                   R_rank_x, R_bar_rank_x,
-                   rn_x, rn_bar_x,
-                   w_bar_x, logit_x)
+    core = PBOCore(
+        J_x,
+        J_bar_x,
+        R_x,
+        R_bar_x,
+        R_rank_x,
+        R_bar_rank_x,
+        rn_x,
+        rn_bar_x,
+        w_bar_x,
+        logit_x,
+    )
 
     return core
 
@@ -311,58 +349,72 @@ def plot_pbo(pbo_result, hist=False):
 
     lm = pbo_result.linear_model
 
-    wid, h = plt.rcParams.get('fig.figsize', (10, 5))
+    wid, h = plt.rcParams.get("fig.figsize", (10, 5))
     nplots = 3
     fig, axarr = plt.subplots(nplots, 1, sharex=False)
     fig.set_size_inches((wid, h * nplots))
 
-    r2 = lm.rvalue**2
+    r2 = lm.rvalue ** 2
     # adj_r2 = r2 - (1 - r2) / (len(pbo_result.R_n_star) - 2.0)
-    line_label = 'slope: {:.4f}\n'.format(lm.slope) +\
-        'p: {:.4E}\n'.format(lm.pvalue) +\
-        '$R^2$: {:.4f}\n'.format(r2) +\
-        'Prob. OOS Loss: {:.1%}'.format(pbo_result.prob_oos_loss)
+    line_label = (
+        "slope: {:.4f}\n".format(lm.slope)
+        + "p: {:.4E}\n".format(lm.pvalue)
+        + "$R^2$: {:.4f}\n".format(r2)
+        + "Prob. OOS Loss: {:.1%}".format(pbo_result.prob_oos_loss)
+    )
 
-    sns.regplot(x='SR_IS', y='SR_OOS',
-                # sns.lmplot(x='SR_IS', y='SR_OOS',
-                data=pd.DataFrame(dict(SR_IS=pbo_result.R_n_star,
-                                       SR_OOS=pbo_result.R_bar_n_star)),
-                scatter_kws={'alpha': .3, 'color': 'g'},
-                line_kws={'alpha': .8,
-                          'label': line_label,
-                          'linewidth': 1.,
-                          'color': 'r'},
-                ax=axarr[0])
-    axarr[0].set_title('Performance Degradation, IS vs. OOS')
-    axarr[0].legend(loc='best')
+    sns.regplot(
+        x="SR_IS",
+        y="SR_OOS",
+        # sns.lmplot(x='SR_IS', y='SR_OOS',
+        data=pd.DataFrame(
+            dict(SR_IS=pbo_result.R_n_star, SR_OOS=pbo_result.R_bar_n_star)
+        ),
+        scatter_kws={"alpha": 0.3, "color": "g"},
+        line_kws={
+            "alpha": 0.8,
+            "label": line_label,
+            "linewidth": 1.0,
+            "color": "r",
+        },
+        ax=axarr[0],
+    )
+    axarr[0].set_title("Performance Degradation, IS vs. OOS")
+    axarr[0].legend(loc="best")
 
     # TODO hist is turned off at the moment. Error occurs when S is set to
     # a relatively large number, such as 16.
-    sns.distplot(pbo_result.logits, rug=True, bins=10,
-                 ax=axarr[1],
-                 rug_kws={'color': 'r', 'alpha': .5},
-                 kde_kws={'color': 'k', 'lw': 2., 'label': 'KDE'},
-                 hist=hist,
-                 hist_kws={'histtype': 'step',
-                           'linewidth': 2.,
-                           'alpha': .7,
-                           'color': 'g'})
-    axarr[1].axvline(0, c='r', ls='--')
-    axarr[1].set_title('Hist. of Rank Logits')
-    axarr[1].set_xlabel('Logits')
-    axarr[1].set_ylabel('Frequency')
+    sns.distplot(
+        pbo_result.logits,
+        rug=True,
+        bins=10,
+        ax=axarr[1],
+        rug_kws={"color": "r", "alpha": 0.5},
+        kde_kws={"color": "k", "lw": 2.0, "label": "KDE"},
+        hist=hist,
+        hist_kws={
+            "histtype": "step",
+            "linewidth": 2.0,
+            "alpha": 0.7,
+            "color": "g",
+        },
+    )
+    axarr[1].axvline(0, c="r", ls="--")
+    axarr[1].set_title("Hist. of Rank Logits")
+    axarr[1].set_xlabel("Logits")
+    axarr[1].set_ylabel("Frequency")
 
-    pbo_result.stochastic.plot(secondary_y='SD2', ax=axarr[2])
-    axarr[2].right_ax.axhline(0, c='r')
-    axarr[2].set_title('Stochastic Dominance')
-    axarr[2].set_ylabel('Frequency')
-    axarr[2].set_xlabel('SR Optimized vs. Non-Optimized')
-    axarr[2].right_ax.set_ylabel('2nd Order Stoch. Dominance')
+    pbo_result.stochastic.plot(secondary_y="SD2", ax=axarr[2])
+    axarr[2].right_ax.axhline(0, c="r")
+    axarr[2].set_title("Stochastic Dominance")
+    axarr[2].set_ylabel("Frequency")
+    axarr[2].set_xlabel("SR Optimized vs. Non-Optimized")
+    axarr[2].right_ax.set_ylabel("2nd Order Stoch. Dominance")
     plt.show()
 
 
 def psr_from_returns(returns, risk_free=0, target_sharpe=0):
-    '''
+    """
     PSR from return series.
 
     Parameters:
@@ -376,23 +428,23 @@ def psr_from_returns(returns, risk_free=0, target_sharpe=0):
 
     Returns:
         PSR probabilities.
-    '''
+    """
     T = len(returns)
-    sharpe = perf.sharpe_iid(returns,
-                             bench=risk_free,
-                             factor=1)
+    sharpe = perf.sharpe_iid(returns, bench=risk_free, factor=1)
     skew = returns.skew()
     kurtosis = returns.kurtosis() + 3
 
-    return psr(sharpe=sharpe,
-               T=T,
-               skew=skew,
-               kurtosis=kurtosis,
-               target_sharpe=target_sharpe)
+    return psr(
+        sharpe=sharpe,
+        T=T,
+        skew=skew,
+        kurtosis=kurtosis,
+        target_sharpe=target_sharpe,
+    )
 
 
 def psr(sharpe, T, skew, kurtosis, target_sharpe=0):
-    '''
+    """
     Probabilistic Sharpe Ratio.
 
     Parameters:
@@ -410,16 +462,19 @@ def psr(sharpe, T, skew, kurtosis, target_sharpe=0):
     Returns:
         Cumulative probabilities for observed sharpe ratios under standard
         Normal distribution.
-    '''
-    value = (sharpe - target_sharpe) * np.sqrt(T - 1) / \
-        np.sqrt(1.0 - skew * sharpe + sharpe**2 * (kurtosis - 1) / 4.0)
+    """
+    value = (
+        (sharpe - target_sharpe)
+        * np.sqrt(T - 1)
+        / np.sqrt(1.0 - skew * sharpe + sharpe ** 2 * (kurtosis - 1) / 4.0)
+    )
     # print(value)
     psr = ss.norm.cdf(value, 0, 1)
     return psr
 
 
 def dsr(test_sharpe, sharpe_std, N, T, skew, kurtosis):
-    '''
+    """
     Deflated Sharpe Ratio statistic. DSR = PSR(SR_0).
     See paper for definition of SR_0. http://ssrn.com/abstract=2460551
 
@@ -439,7 +494,7 @@ def dsr(test_sharpe, sharpe_std, N, T, skew, kurtosis):
 
     Returns:
         DSR statistic
-    '''
+    """
     # sharpe_std = np.std(sharpe_n, ddof=1)
     target_sharpe = sharpe_std * expected_max(N)
 
@@ -449,7 +504,7 @@ def dsr(test_sharpe, sharpe_std, N, T, skew, kurtosis):
 
 
 def dsr_from_returns(test_sharpe, returns_df, risk_free=0):
-    '''
+    """
     Calculate DSR based on a set of given returns_df.
 
     Parameters:
@@ -461,18 +516,21 @@ def dsr_from_returns(test_sharpe, returns_df, risk_free=0):
             Risk free return, default 0.
     Returns:
         DSR statistic
-    '''
+    """
     T, N = returns_df.shape
-    sharpe = perf.sharpe_iid(returns_df,
-                             bench=risk_free,
-                             factor=1)
+    sharpe = perf.sharpe_iid(returns_df, bench=risk_free, factor=1)
     sharpe_std = np.std(sharpe, ddof=1)
     skew = returns_df.skew()
     kurtosis = returns_df.kurtosis() + 3
 
-    dsr = dsr(test_sharpe,
-              sharpe_std=sharpe_std,
-              N=N, T=T, skew=skew, kurtosis=kurtosis)
+    dsr = dsr(
+        test_sharpe,
+        sharpe_std=sharpe_std,
+        N=N,
+        T=T,
+        skew=skew,
+        kurtosis=kurtosis,
+    )
 
     return dsr
 
@@ -488,8 +546,8 @@ def dsr_from_returns(test_sharpe, returns_df, risk_free=0):
 #                                                 axis=0, ddof=1) * factor
 
 
-def minTRL(sharpe, skew, kurtosis, target_sharpe=0, prob=.95):
-    '''
+def minTRL(sharpe, skew, kurtosis, target_sharpe=0, prob=0.95):
+    """
     Minimum Track Record Length.
 
     Parameters:
@@ -506,27 +564,31 @@ def minTRL(sharpe, skew, kurtosis, target_sharpe=0, prob=.95):
 
     Returns:
         minTRL, in terms of number of observations.
-    '''
-    min_track = 1 + (1 - skew * sharpe + sharpe**2 * (kurtosis - 1) / 4.0) *\
-        (ss.norm.ppf(prob) / (sharpe - target_sharpe))**2
+    """
+    min_track = (
+        1
+        + (1 - skew * sharpe + sharpe ** 2 * (kurtosis - 1) / 4.0)
+        * (ss.norm.ppf(prob) / (sharpe - target_sharpe)) ** 2
+    )
     return min_track
 
 
 def expected_max(N):
-    '''
+    """
     Expected maximum of IID random variance X_n ~ Z, n = 1,...,N,
     where Z is the CDF of the standard Normal distribution,
     E[MAX_n] = E[max{x_n}]. Computed for a large N.
 
-    '''
+    """
     if N < 5:
-        raise AssertionError('Condition N >> 1 not satisfied.')
-    return (1 - np.euler_gamma) * ss.norm.ppf(1 - 1.0 / N) + \
-        np.euler_gamma * ss.norm.ppf(1 - np.exp(-1) / N)
+        raise AssertionError("Condition N >> 1 not satisfied.")
+    return (1 - np.euler_gamma) * ss.norm.ppf(
+        1 - 1.0 / N
+    ) + np.euler_gamma * ss.norm.ppf(1 - np.exp(-1) / N)
 
 
 def minBTL(N, sharpe_IS):
-    '''
+    """
     Minimum backtest length. minBTL should be considered a necessary,
     non-sufficient condition to avoid overfitting. See PBO for a more precise
     measure of backtest overfitting.
@@ -542,12 +604,11 @@ def minBTL(N, sharpe_IS):
             minimum back test length
         upper_bound :
             upper bound for minBTL
-    '''
+    """
     exp_max = expected_max(N)
 
-    btl = (exp_max / sharpe_IS)**2
+    btl = (exp_max / sharpe_IS) ** 2
 
-    upper_bound = 2 * np.log(N) / sharpe_IS**2
+    upper_bound = 2 * np.log(N) / sharpe_IS ** 2
 
     return (btl, upper_bound)
-

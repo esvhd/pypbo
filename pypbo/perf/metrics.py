@@ -4,8 +4,10 @@ import matplotlib.pyplot as plt
 
 import scipy.stats as ss
 import statsmodels.tsa.stattools as sts
+
 # import statsmodels.tools.tools as stt
 import statsmodels.distributions.empirical_distribution as sde
+
 # import statsmodels.stats.diagnostic as ssd
 
 import warnings
@@ -43,12 +45,12 @@ def _reindex_dates(source, target):
     # assert no NaN
     nan_flag = np.isnan(result)
     nan_check = nan_flag.sum()
-    assert(nan_check == 0), 'Unmatched dates, NaN #{}'.format(nan_check)
+    assert nan_check == 0, "Unmatched dates, NaN #{}".format(nan_check)
     return result
 
 
 def log_excess(rtns, bench, debug=True):
-    '''
+    """
     Calculate excess return given two log return series.
 
     Args:
@@ -57,7 +59,7 @@ def log_excess(rtns, bench, debug=True):
 
     Returns:
         Log excess returns
-    '''
+    """
     # convert to pct space then back to log
     # if isinstance(rtns, pd.Series) or isinstance(rtns, pd.DataFrame):
     #     x = np.exp(rtns).sub(np.exp(bench), axis='index')
@@ -104,9 +106,9 @@ def pct_to_log_excess(returns, bench):
 
 
 def returns_gmean(returns):
-    '''
+    """
     Calculates geometric average returns from a given returns series.
-    '''
+    """
     if isinstance(returns, pd.DataFrame) or isinstance(returns, pd.Series):
         returns = returns.fillna(0)
     else:
@@ -147,9 +149,9 @@ def log_returns(prices, n=1, fillna=False):
         # rtns.fillna(0, inplace=True)
         # only fill first period nan
         if _is_pandas(rtns):
-            rtns.values[0] = 0.
+            rtns.values[0] = 0.0
         else:
-            rtns[0] = 0.
+            rtns[0] = 0.0
     return rtns
 
 
@@ -206,10 +208,10 @@ def LPM(returns, target_rtn, moment):
 
 
 def kappa(returns, target_rtn, moment, log=True):
-    '''
+    """
     Geometric mean should be used when returns are percentage returns.
     Arithmetic mean should be used when returns are log returns.
-    '''
+    """
     # validate_return_type(return_type)
 
     if log:
@@ -226,33 +228,30 @@ def kappa(returns, target_rtn, moment, log=True):
     else:
         mean = np.nanmean(excess)
 
-    kappa = mean / np.power(LPM(returns, target_rtn, moment=moment),
-                            1.0 / moment)
+    kappa = mean / np.power(
+        LPM(returns, target_rtn, moment=moment), 1.0 / moment
+    )
     return kappa
 
 
 def kappa3(returns, target_rtn=0, log=True):
-    '''
+    """
     Kappa 3
-    '''
+    """
     return kappa(returns, target_rtn=target_rtn, moment=3, log=log)
 
 
 def omega(returns, target_rtn=0, log=True):
-    '''
+    """
     Omega Ratio
-    '''
-    return 1 + kappa(returns,
-                     target_rtn=target_rtn,
-                     moment=1,
-                     log=log)
+    """
+    return 1 + kappa(returns, target_rtn=target_rtn, moment=1, log=log)
 
 
-def omega_empirical(returns, target_rtn=0, log=True,
-                    plot=False, steps=1000):
-    '''
+def omega_empirical(returns, target_rtn=0, log=True, plot=False, steps=1000):
+    """
     Omega Ratio based on empirical distribution.
-    '''
+    """
     # validate_return_type(return_type)
 
     if not log:
@@ -265,20 +264,16 @@ def omega_empirical(returns, target_rtn=0, log=True,
     x = np.linspace(start=returns.min(), stop=returns.max(), num=steps)
     y = ecdf(x)
 
-    norm_cdf = ss.norm.cdf(x,
-                           loc=returns.mean(),
-                           scale=returns.std(ddof=1))
+    norm_cdf = ss.norm.cdf(x, loc=returns.mean(), scale=returns.std(ddof=1))
 
     # Plot empirical distribution CDF versus Normal CDF with same mean and
     # stdev
     if plot:
         fig, ax = plt.subplots()
         fig.set_size_inches((12, 6))
-        ax.plot(x, y, c='r', ls='--', lw=1.5, alpha=.8, label='ECDF')
-        ax.plot(x, norm_cdf,
-                alpha=.3, ls='-', c='b', lw=5,
-                label='Normal CDF')
-        ax.legend(loc='best')
+        ax.plot(x, y, c="r", ls="--", lw=1.5, alpha=0.8, label="ECDF")
+        ax.plot(x, norm_cdf, alpha=0.3, ls="-", c="b", lw=5, label="Normal CDF")
+        ax.legend(loc="best")
         plt.show(fig)
         plt.close(fig)
 
@@ -286,10 +281,10 @@ def omega_empirical(returns, target_rtn=0, log=True,
 
 
 def sortino(returns, target_rtn=0, factor=1, log=True):
-    '''
+    """
     Sortino I.I.D ratio caluclated using Lower Partial Moment.
     Result should be the same as `sortino_iid`.
-    '''
+    """
     # validate_return_type(return_type)
 
     if not log:
@@ -300,12 +295,18 @@ def sortino(returns, target_rtn=0, factor=1, log=True):
 
     if _is_pandas(returns):
         # return (returns.mean() - target_rtn) / \
-        return excess.mean() / \
-            np.sqrt(LPM(returns, target_rtn, 2)) * np.sqrt(factor)
+        return (
+            excess.mean()
+            / np.sqrt(LPM(returns, target_rtn, 2))
+            * np.sqrt(factor)
+        )
     else:
         # return np.nanmean(returns - target_rtn) / \
-        return np.nanmean(excess) / \
-            np.sqrt(LPM(returns, target_rtn, 2)) * np.sqrt(factor)
+        return (
+            np.nanmean(excess)
+            / np.sqrt(LPM(returns, target_rtn, 2))
+            * np.sqrt(factor)
+        )
 
 
 def sortino_iid(rtns, bench=0, factor=1, log=True):
@@ -366,8 +367,10 @@ def match_rtn_dates(rtns, bench):
         check = bench.count()
         if expected != check:
             # warning
-            warnings.warn('Returns and benchmark length not matching, '
-                          '{} vs {}'.format(expected, check))
+            warnings.warn(
+                "Returns and benchmark length not matching, "
+                "{} vs {}".format(expected, check)
+            )
         return bench
     else:
         return bench
@@ -405,14 +408,13 @@ def sharpe_iid(rtns, bench=0, factor=1, log=True):
     else:
         # numpy way
         excess_mean = np.nanmean(excess, axis=0)
-        return np.sqrt(factor) * excess_mean / np.nanstd(excess,
-                                                         axis=0, ddof=1)
+        return np.sqrt(factor) * excess_mean / np.nanstd(excess, axis=0, ddof=1)
 
 
 def sharpe_iid_rolling(rtns, window, bench=0, factor=1, log=True):
-    '''
+    """
     Rolling sharpe ratio, unadjusted by time aggregation.
-    '''
+    """
     # validate_return_type(return_type)
 
     if log:
@@ -425,7 +427,7 @@ def sharpe_iid_rolling(rtns, window, bench=0, factor=1, log=True):
 
 
 def sharpe_iid_adjusted(rtns, bench=0, factor=1, log=True):
-    '''
+    """
     Adjusted Sharpe Ratio, acount for skew and kurtosis in return series.
 
     Pezier and White (2006) adjusted sharpe ratio.
@@ -448,7 +450,7 @@ def sharpe_iid_adjusted(rtns, bench=0, factor=1, log=True):
 
     Returns:
         TYPE
-    '''
+    """
     sr = sharpe_iid(rtns, bench=bench, factor=1, log=log)
     # print(sr)
 
@@ -456,14 +458,15 @@ def sharpe_iid_adjusted(rtns, bench=0, factor=1, log=True):
         skew = rtns.skew()
         excess_kurt = rtns.kurtosis()
     else:
-        skew = ss.skew(rtns, bias=False, nan_policy='omit')
-        excess_kurt = ss.kurtosis(rtns, bias=False, fisher=True,
-                                  nan_policy='omit')
+        skew = ss.skew(rtns, bias=False, nan_policy="omit")
+        excess_kurt = ss.kurtosis(
+            rtns, bias=False, fisher=True, nan_policy="omit"
+        )
     return adjusted_sharpe(sr, skew, excess_kurt) * np.sqrt(factor)
 
 
 def adjusted_sharpe(sr, skew, excess_kurtosis):
-    '''
+    """
     Adjusted Sharpe Ratio, acount for skew and kurtosis in return series.
 
     Pezier and White (2006) adjusted sharpe ratio.
@@ -477,14 +480,13 @@ def adjusted_sharpe(sr, skew, excess_kurtosis):
             return series skew
         excess_kurtosis :
             return series excess kurtosis
-    '''
+    """
     # return sr * (1 + (skew / 6.0) * sr + (kurtosis - 3) / 24.0 * sr**2)
-    return sr * (1 + (skew / 6.0) * sr + excess_kurtosis / 24.0 * sr**2)
+    return sr * (1 + (skew / 6.0) * sr + excess_kurtosis / 24.0 * sr ** 2)
 
 
-def sharpe_non_iid(rtns, bench=0, q=trading_days, p_critical=.05,
-                   log=True):
-    '''
+def sharpe_non_iid(rtns, bench=0, q=trading_days, p_critical=0.05, log=True):
+    """
     Return Sharpe Ratio adjusted for auto-correlation, iff Ljung-Box test
     indicates that the return series exhibits auto-correlation. Based on
     Andrew Lo (2002).
@@ -509,15 +511,17 @@ def sharpe_non_iid(rtns, bench=0, q=trading_days, p_critical=.05,
 
     Returns:
         TYPE
-    '''
+    """
     if type(q) is not np.int64 or type(q) is not np.int32:
         q = np.round(q, 0).astype(np.int64)
 
     if len(rtns) <= q:
         # raise AssertionError('No. of returns [{}] must be greated than {}'
         #                      .format(len(rtns), q))
-        warnings.warn('Sharpe Non-IID: No. of returns [{}] must be greated'
-                      ' than {}. NaN returned.'.format(len(rtns), q))
+        warnings.warn(
+            "Sharpe Non-IID: No. of returns [{}] must be greated"
+            " than {}. NaN returned.".format(len(rtns), q)
+        )
         dim = rtns.shape
         if len(dim) < 2:
             return np.nan
@@ -539,10 +543,14 @@ def sharpe_non_iid(rtns, bench=0, q=trading_days, p_critical=.05,
         if isinstance(rtns, pd.Series):
             tests = [sharpe_autocorr_factor(rtns.dropna().values, q=q)]
         else:
-            tests = [sharpe_autocorr_factor(rtns[col].dropna().values, q=q)
-                     for col in rtns.columns]
-        factors = [adj_factor if pval < p_critical else np.sqrt(q)
-                   for adj_factor, pval in tests]
+            tests = [
+                sharpe_autocorr_factor(rtns[col].dropna().values, q=q)
+                for col in rtns.columns
+            ]
+        factors = [
+            adj_factor if pval < p_critical else np.sqrt(q)
+            for adj_factor, pval in tests
+        ]
 
         if isinstance(rtns, pd.Series):
             out = sr * factors[0]
@@ -554,7 +562,7 @@ def sharpe_non_iid(rtns, bench=0, q=trading_days, p_critical=.05,
 
 
 def sharpe_autocorr_factor(returns, q):
-    '''
+    """
     Auto-correlation correction for Sharpe ratio time aggregation based on
     Andrew Lo's 2002 paper.
 
@@ -571,7 +579,7 @@ def sharpe_autocorr_factor(returns, q):
     Returns:
         factor : time aggregation factor
         p-value : p-value for Ljung-Box serial correation test.
-    '''
+    """
     # Ljung-Box Null: data is independent, i.e. no auto-correlation.
     # smaller p-value would reject the Null, i.e. there is auto-correlation
     acf, _, pval = sts.acf(returns, unbiased=False, nlags=q, qstat=True)
@@ -582,7 +590,7 @@ def sharpe_autocorr_factor(returns, q):
 
 
 def annual_geometric_returns(rtns, ann_factor=trading_days, log=True):
-    '''
+    """
     Take a return series and produce annualized geometric return.
 
     Args:
@@ -595,7 +603,7 @@ def annual_geometric_returns(rtns, ann_factor=trading_days, log=True):
 
     Returns:
         float, annualized geometric return
-    '''
+    """
     if not log:
         rtns = pct_to_log_return(rtns)
     total_rtn = np.exp(rtns.sum())
@@ -604,7 +612,7 @@ def annual_geometric_returns(rtns, ann_factor=trading_days, log=True):
 
 
 def annualized_pct_return(total_return, days, ann_factor=trading_days):
-    '''
+    """
     Parameters:
         total_return:
             total pct equity curve, e.g. if return is +50%, then this
@@ -615,14 +623,14 @@ def annualized_pct_return(total_return, days, ann_factor=trading_days):
             number of days in a year
     Returns:
         Annualized percentage return.
-    '''
+    """
     years = days / ann_factor
-    ann = np.power(total_return, 1. / years) - 1
+    ann = np.power(total_return, 1.0 / years) - 1
     return ann
 
 
 def annualized_log_return(total_return, days, ann_factor=trading_days):
-    '''
+    """
     Parameters:
         total_return:
             total log return, e.g. if return is +50%, then this should be 0.5,
@@ -633,7 +641,7 @@ def annualized_log_return(total_return, days, ann_factor=trading_days):
             number of days in a year
     Returns:
         Annualized percentage return.
-    '''
+    """
 
     years = days / ann_factor
     ann = total_return / years
@@ -641,7 +649,7 @@ def annualized_log_return(total_return, days, ann_factor=trading_days):
 
 
 def tail_ratio(returns, tail_prob=5):
-    '''
+    """
     Determines the ratio between the right (95%) and left tail (5%).
     For example, a ratio of 0.25 means that losses are four times
     as bad as profits.
@@ -657,15 +665,16 @@ def tail_ratio(returns, tail_prob=5):
     -------
     float
         tail_prob ratio
-    '''
+    """
     if _is_pandas(returns):
-        tail_prob /= 100.
+        tail_prob /= 100.0
         top = returns.quantile(q=1 - tail_prob)
         bottom = returns.quantile(q=tail_prob)
         return np.abs(top / bottom)
     else:
-        return np.abs(np.nanpercentile(returns, 100 - tail_prob)) / \
-            np.abs(np.nanpercentile(returns, tail_prob))
+        return np.abs(np.nanpercentile(returns, 100 - tail_prob)) / np.abs(
+            np.nanpercentile(returns, tail_prob)
+        )
 
 
 def max_drawdown(equity):
@@ -677,7 +686,7 @@ def max_drawdown_from_rtns(returns, log=True):
 
 
 def drawdown(equity):
-    '''
+    """
     Drawdown curve.
 
     Args:
@@ -686,16 +695,16 @@ def drawdown(equity):
 
     Returns:
         drawdown curve in percentage terms from peaks.
-    '''
+    """
     if isinstance(equity, np.ndarray) or isinstance(equity, list):
         equity = pd.DataFrame(equity)
     highs = equity.expanding().max()
-    dd = equity / highs - 1.
+    dd = equity / highs - 1.0
     return dd
 
 
 def drawdown_from_rtns(returns, log=True):
-    '''
+    """
     Drowdown curve from returns.
 
     Args:
@@ -706,7 +715,7 @@ def drawdown_from_rtns(returns, log=True):
 
     Returns:
         TYPE
-    '''
+    """
     if log:
         equity = np.exp(returns.cumsum())
     else:
@@ -715,7 +724,7 @@ def drawdown_from_rtns(returns, log=True):
 
 
 def calmar_ratio(returns, factor=trading_days, log=True):
-    '''
+    """
     CALMAR ratio: annualized return over  max drawdown, for last 36
     months.
 
@@ -726,7 +735,7 @@ def calmar_ratio(returns, factor=trading_days, log=True):
             return series
     Returns:
         Calmar ratio, calculated with normal percentage returns.
-    '''
+    """
     if not log:
         returns = pct_to_log_return(returns)
 
