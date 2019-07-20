@@ -685,7 +685,7 @@ def max_drawdown_from_rtns(returns, log=True):
     return drawdown_from_rtns(returns, log=log).min()
 
 
-def drawdown(equity):
+def drawdown(equity) -> pd.DataFrame:
     """
     Drawdown curve.
 

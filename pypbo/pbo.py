@@ -523,7 +523,7 @@ def dsr_from_returns(test_sharpe, returns_df, risk_free=0):
     skew = returns_df.skew()
     kurtosis = returns_df.kurtosis() + 3
 
-    dsr = dsr(
+    out = dsr(
         test_sharpe,
         sharpe_std=sharpe_std,
         N=N,
@@ -532,7 +532,7 @@ def dsr_from_returns(test_sharpe, returns_df, risk_free=0):
         kurtosis=kurtosis,
     )
 
-    return dsr
+    return out
 
 
 # def sharpe_iid(df, bench=0, factor=np.sqrt(255)):
