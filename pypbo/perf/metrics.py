@@ -155,11 +155,15 @@ def log_returns(prices, n=1, fillna=False):
     return rtns
 
 
-def pct_to_log_return(pct_returns):
+def pct_to_log_return(pct_returns, fillna=True):
     if _is_pandas(pct_returns):
-        return np.log(1 + pct_returns.fillna(0))
+        if fillna:
+            pct_returns = pct_returns.fillna(0)
+        return np.log(1 + pct_returns)
     else:
-        return np.log(1 + np.nan_to_num(pct_returns))
+        if fillna:
+            pct_returns = np.nan_to_num(pct_returns)
+        return np.log(1 + pct_returns)
 
 
 def log_to_pct_return(log_returns):
