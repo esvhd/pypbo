@@ -205,8 +205,10 @@ def pbo(
         # i.e. the same config / setting
         rn_bar = [R_bar_rank[i][rn[i]] for i in range(len(R_bar_rank))]
 
-        # formula in paper used N+1 as the denominator for w_bar.
-        w_bar = [float(r) / N for r in rn_bar]
+        # formula in paper used N+1 as the denominator for w_bar. For good reason
+        # to avoid 1.0 in w_bar which leads to inf in logits. Intuitively, just
+        # because all of the samples have outperformed one cannot be 100% sure.
+        w_bar = [float(r) / (N+1) for r in rn_bar]
         # logit(.5) gives 0 so if w_bar value is equal to median logits is 0
         logits = [spec.logit(w) for w in w_bar]
     else:
@@ -326,7 +328,10 @@ def pbo_core_calc(Cs, Ms, Ms_values, Ms_index, metric_func, verbose=False):
     rn_x = np.argmax(R_rank_x)
     rn_bar_x = R_bar_rank_x[rn_x]
 
-    w_bar_x = float(rn_bar_x) / len(R_bar_rank_x)
+    # formula in paper used N+1 as the denominator for w_bar. For good reason
+    # to avoid 1.0 in w_bar which leads to inf in logits. Intuitively, just
+    # because all of the samples have outperformed one cannot be 100% sure.
+    w_bar_x = float(rn_bar_x) / (len(R_bar_rank_x)+1)  # / (N+1)
     logit_x = spec.logit(w_bar_x)
 
     core = PBOCore(
@@ -387,7 +392,7 @@ def plot_pbo(pbo_result, hist=False):
     sns.distplot(
         pbo_result.logits,
         rug=True,
-        bins=10,
+        #bins=10,  # default might be more useful
         ax=axarr[1],
         rug_kws={"color": "r", "alpha": 0.5},
         kde_kws={"color": "k", "lw": 2.0, "label": "KDE"},
