@@ -586,7 +586,7 @@ def sharpe_autocorr_factor(returns, q):
     """
     # Ljung-Box Null: data is independent, i.e. no auto-correlation.
     # smaller p-value would reject the Null, i.e. there is auto-correlation
-    acf, _, pval = sts.acf(returns, unbiased=False, nlags=q, qstat=True)
+    acf, _, pval = sts.acf(returns, adjusted=False, nlags=q, qstat=True)
     term = [(q - (k + 1)) * acf[k + 1] for k in range(q - 2)]
     factor = q / np.sqrt(q + 2 * np.sum(term))
 
