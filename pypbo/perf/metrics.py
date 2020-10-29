@@ -102,7 +102,7 @@ def pct_to_log_excess(returns, bench):
     """
     rtns_log = pct_to_log_return(returns)
     bench_log = pct_to_log_return(bench)
-    return log_excess(returns, bench)
+    return log_excess(rtns_log, bench_log)
 
 
 def returns_gmean(returns):
