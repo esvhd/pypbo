@@ -415,7 +415,9 @@ def sharpe_iid(rtns, bench=0, factor=1, log=True):
         return np.sqrt(factor) * excess_mean / np.nanstd(excess, axis=0, ddof=1)
 
 
-def sharpe_iid_rolling(rtns, window, bench=0, factor=1, log=True):
+def sharpe_iid_rolling(
+    rtns, window: int, min_periods: int, bench=0, factor=1, log=True
+):
     """
     Rolling sharpe ratio, unadjusted by time aggregation.
     """
@@ -426,7 +428,7 @@ def sharpe_iid_rolling(rtns, window, bench=0, factor=1, log=True):
     else:
         excess = pct_to_log_excess(rtns, bench)
 
-    roll = excess.rolling(window=window)
+    roll = excess.rolling(window=window, min_periods=min_periods)
     return np.sqrt(factor) * roll.mean() / roll.std(ddof=1)
 
 
@@ -523,7 +525,7 @@ def sharpe_non_iid(rtns, bench=0, q=trading_days, p_critical=0.05, log=True):
         # raise AssertionError('No. of returns [{}] must be greated than {}'
         #                      .format(len(rtns), q))
         warnings.warn(
-            "Sharpe Non-IID: No. of returns [{}] must be greated"
+            "Sharpe Non-IID: No. of returns [{}] must be greater"
             " than {}. NaN returned.".format(len(rtns), q)
         )
         dim = rtns.shape
