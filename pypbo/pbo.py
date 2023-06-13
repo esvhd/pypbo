@@ -573,7 +573,7 @@ def minTRL(sharpe, skew, kurtosis, target_sharpe=0, prob=0.95):
     min_track = (
         1
         + (1 - skew * sharpe + sharpe ** 2 * (kurtosis - 1) / 4.0)
-        * (ss.norm.ppf(prob) / (sharpe - target_sharpe)) ** 2
+        * (spec.ndtri(prob) / (sharpe - target_sharpe)) ** 2
     )
     return min_track
 
@@ -587,9 +587,9 @@ def expected_max(N):
     """
     if N < 5:
         raise AssertionError("Condition N >> 1 not satisfied.")
-    return (1 - np.euler_gamma) * ss.norm.ppf(
+    return (1 - np.euler_gamma) * spec.ndtri(
         1 - 1.0 / N
-    ) + np.euler_gamma * ss.norm.ppf(1 - np.exp(-1) / N)
+    ) + np.euler_gamma * spec.ndtri(1 - np.exp(-1) / N)
 
 
 def minBTL(N, sharpe_IS):
